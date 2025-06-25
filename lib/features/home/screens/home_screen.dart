@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smart_chat_app/models/user_model.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -9,10 +10,11 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
-      return const Center(child: Text('Not signed in'));
+      return const Scaffold(
+        body: Center(child: Text('Not signed in')),
+      );
     }
 
-    // Query for chats where the current user is a participant
     final chatQuery = FirebaseFirestore.instance
         .collection('chats')
         .where('participants', arrayContains: currentUser.uid)
@@ -44,6 +46,7 @@ class HomeScreen extends StatelessWidget {
                 (id) => id != currentUser.uid,
                 orElse: () => '',
               );
+              if (otherUserId.isEmpty) return const SizedBox.shrink();
               final lastMessage = data['lastMessage'] ?? '';
               final lastMessageTime = (data['lastMessageTime'] as Timestamp?)?.toDate();
 
@@ -51,13 +54,21 @@ class HomeScreen extends StatelessWidget {
                 future: FirebaseFirestore.instance.collection('users').doc(otherUserId).get(),
                 builder: (context, userSnapshot) {
                   String otherUserName = 'Unknown';
+                  String otherUserPic = '';
                   if (userSnapshot.hasData && userSnapshot.data!.exists) {
                     final userData = userSnapshot.data!.data() as Map<String, dynamic>;
-                    otherUserName = userData['name'] ?? 'Unknown';
+                    final otherUser = UserModel.fromMap(userData);
+                    otherUserName = otherUser.name;
+                    otherUserPic = otherUser.profilePic;
                   }
 
                   return ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.person)),
+                    leading: CircleAvatar(
+                      backgroundImage: otherUserPic.isNotEmpty
+                          ? NetworkImage(otherUserPic)
+                          : null,
+                      child: otherUserPic.isEmpty ? const Icon(Icons.person) : null,
+                    ),
                     title: Text(otherUserName),
                     subtitle: Text(lastMessage, maxLines: 1, overflow: TextOverflow.ellipsis),
                     trailing: lastMessageTime != null

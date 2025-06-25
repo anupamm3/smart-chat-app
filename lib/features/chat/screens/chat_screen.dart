@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smart_chat_app/models/message_model.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -34,6 +35,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final message = {
       'text': text,
       'senderId': user.uid,
+      'receiverId': otherUserId,
       'timestamp': FieldValue.serverTimestamp(),
     };
 
@@ -87,9 +89,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final msg = messages[index].data() as Map<String, dynamic>;
-                    final isMe = msg['senderId'] == user.uid;
-                    final time = (msg['timestamp'] as Timestamp?)?.toDate();
+                    final msg = MessageModel.fromMap(messages[index].data() as Map<String, dynamic>);
+                    final isMe = msg.senderId == user.uid;
+                    final time = msg.timestamp;
                     return Align(
                       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
@@ -105,7 +107,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                           children: [
                             Text(
-                              msg['text'] ?? '',
+                              msg.text,
                               style: TextStyle(
                                 color: isMe
                                     ? Colors.white
