@@ -7,7 +7,8 @@ class MessageModel {
   final String text;
   final DateTime? timestamp;
   final MessageStatus status;
-  final bool isScheduled;
+  final String? type;
+  final bool sent;
   final DateTime? scheduledTime;
 
   MessageModel({
@@ -16,7 +17,8 @@ class MessageModel {
     required this.text,
     this.timestamp,
     required this.status,
-    this.isScheduled = false,
+    this.type,
+    this.sent = true,
     this.scheduledTime,
   });
 
@@ -28,11 +30,14 @@ class MessageModel {
       timestamp: map['timestamp'] != null
           ? (map['timestamp'] as Timestamp).toDate()
           : null,
-          status: MessageStatus.values.firstWhere(
+      status: MessageStatus.values.firstWhere(
         (e) => e.name == (map['status'] ?? 'sent'),
         orElse: () => MessageStatus.sent,
       ),
-      isScheduled: map['isSent'] == false, // If not sent, it's scheduled
+      type: map['type'] as String?,
+      sent: map['sent'] is bool
+          ? map['sent'] as bool
+          : (map['isSent'] is bool ? map['isSent'] as bool : true),
       scheduledTime: map['scheduledTime'] != null
           ? (map['scheduledTime'] as Timestamp).toDate()
           : null,
@@ -44,10 +49,11 @@ class MessageModel {
       'senderId': senderId,
       'receiverId': receiverId,
       'text': text,
-      'timestamp': timestamp,
+      'timestamp': timestamp != null ? Timestamp.fromDate(timestamp!) : null,
       'status': status.name,
-      'isSent': !isScheduled,
-      'scheduledTime': scheduledTime,
+      'type': type ?? 'text',
+      'sent': sent,
+      'scheduledTime': scheduledTime != null ? Timestamp.fromDate(scheduledTime!) : null,
     };
   }
 }
