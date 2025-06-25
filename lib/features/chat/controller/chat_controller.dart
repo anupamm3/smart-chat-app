@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smart_chat_app/models/message_model.dart';
+import 'package:smart_chat_app/services/firestore_service.dart';
 
 final chatControllerProvider = Provider((ref) => ChatController());
 
 class ChatController {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   Timer? _scheduledChecker;
 
@@ -33,20 +33,12 @@ class ChatController {
       timestamp: DateTime.now(),
       isScheduled: false,
       scheduledTime: null,
-    ).toMap();
+    );
 
-    await _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .add(message);
-
-    // Update chat's last message info
-    await _firestore.collection('chats').doc(chatId).set({
-      'participants': [user.uid, receiverId],
-      'lastMessage': text,
-      'lastMessageTime': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await FirestoreService.sendMessage(
+      chatId: chatId,
+      message: message,
+    );
   }
 
   // Send a scheduled message
@@ -66,27 +58,19 @@ class ChatController {
       timestamp: null,
       isScheduled: true,
       scheduledTime: scheduledTime,
-    ).toMap();
+    );
 
-    await _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .add(message);
-
-    // Optionally update chat doc for UI
-    await _firestore.collection('chats').doc(chatId).set({
-      'participants': [user.uid, receiverId],
-      'lastMessage': '[Scheduled message]',
-      'lastMessageTime': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    await FirestoreService.sendMessage(
+      chatId: chatId,
+      message: message,
+    );
   }
 
   // Periodically check and send scheduled messages
   void startScheduledMessageChecker(String chatId) {
     _scheduledChecker?.cancel();
     _scheduledChecker = Timer.periodic(const Duration(seconds: 15), (_) {
-      _checkAndSendScheduledMessages(chatId);
+      FirestoreService.checkAndSendScheduledMessages(chatId);
     });
   }
 
@@ -94,37 +78,8 @@ class ChatController {
     _scheduledChecker?.cancel();
   }
 
-  Future<void> _checkAndSendScheduledMessages(String chatId) async {
-    final now = DateTime.now();
-    final scheduledMessages = await _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .where('isSent', isEqualTo: false)
-        .where('scheduledTime', isLessThanOrEqualTo: now)
-        .get();
-
-    for (var doc in scheduledMessages.docs) {
-      await doc.reference.update({
-        'isSent': true,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      final data = doc.data();
-      await _firestore.collection('chats').doc(chatId).update({
-        'lastMessage': data['text'],
-        'lastMessageTime': FieldValue.serverTimestamp(),
-      });
-    }
-  }
-
-  // Fetch messages stream for a chat
-  Stream<QuerySnapshot> messagesStream(String chatId) {
-    return _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .orderBy('timestamp')
-        .snapshots();
+  // Fetch messages stream for a chat (now returns List<MessageModel>)
+  Stream<List<MessageModel>> messagesStream(String chatId) {
+    return FirestoreService.fetchMessages(chatId);
   }
 }
