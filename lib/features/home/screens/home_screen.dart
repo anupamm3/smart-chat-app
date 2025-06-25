@@ -5,7 +5,7 @@ import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/features/groups/screens/group_chat_screen.dart';
-import 'package:smart_chat_app/features/profile/screens/profile_screen.dart';
+import 'package:smart_chat_app/features/profile/screens/user_profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -45,7 +45,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> tabs = [
       _ChatsTab(user: user),
       GroupChatScreen(),
-      ProfileScreen(user: user),
+      FutureBuilder<DocumentSnapshot>(
+        future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final userModel = UserModel.fromMap(snapshot.data!.data() as Map<String, dynamic>);
+          return UserProfileScreen(user: userModel);
+        },
+      ),
     ];
 
     return Scaffold(
@@ -296,16 +305,17 @@ class _ChatsTab extends StatelessWidget {
                                   ),
                               ],
                             ),
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                AppRoutes.chat,
-                                arguments: {
-                                  'chatId': chat.id,
-                                  'otherUserId': otherUserId,
-                                  'otherUserName': otherUserName,
-                                },
-                              );
+                            onTap: () async {
+                              final userDoc = await FirebaseFirestore.instance.collection('users').doc(otherUserId).get();
+                              if (!context.mounted) return;
+                              if (userDoc.exists) {
+                                final otherUser = UserModel.fromMap(userDoc.data() as Map<String, dynamic>);
+                                Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.chat,
+                                  arguments: otherUser,
+                                );
+                              }
                             },
                           ),
                         );

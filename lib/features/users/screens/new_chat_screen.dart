@@ -299,10 +299,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
                                   Navigator.pushNamed(
                                     context,
                                     AppRoutes.chat,
-                                    arguments: {
-                                      'otherUserId': user.uid,
-                                      'otherUserName': contactName ?? user.phoneNumber,
-                                    },
+                                    arguments: user,
                                   );
                                 },
                               ),

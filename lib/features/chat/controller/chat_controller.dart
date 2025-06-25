@@ -1,84 +1,79 @@
-import 'dart:async';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smart_chat_app/models/message_model.dart';
-import 'package:smart_chat_app/services/firestore_service.dart';
-
-final chatControllerProvider = Provider((ref) => ChatController());
+import 'package:smart_chat_app/models/user_model.dart';
 
 class ChatController {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  Timer? _scheduledChecker;
+  final UserModel receiver;
+  final User currentUser = FirebaseAuth.instance.currentUser!;
+  late final String chatId;
 
-  // Generate a unique chatId for two users (sorted)
-  String getChatId(String userA, String userB) {
-    final ids = [userA, userB]..sort();
-    return ids.join('_');
+  ChatController({required this.receiver}) {
+    chatId = _generateChatId(currentUser.uid, receiver.uid);
   }
 
-  // Send a normal message
-  Future<void> sendMessage({
-    required String chatId,
-    required String text,
-    required String receiverId,
-  }) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
-    final message = MessageModel(
-      senderId: user.uid,
-      receiverId: receiverId,
-      text: text,
-      timestamp: DateTime.now(),
-      isScheduled: false,
-      scheduledTime: null,
-    );
-
-    await FirestoreService.sendMessage(
-      chatId: chatId,
-      message: message,
-    );
+  String _generateChatId(String uid1, String uid2) {
+    final sortedUids = [uid1, uid2]..sort();
+    return sortedUids.join('_');
   }
 
-  // Send a scheduled message
-  Future<void> sendScheduledMessage({
-    required String chatId,
-    required String text,
-    required String receiverId,
-    required DateTime scheduledTime,
-  }) async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
-    final message = MessageModel(
-      senderId: user.uid,
-      receiverId: receiverId,
-      text: text,
-      timestamp: null,
-      isScheduled: true,
-      scheduledTime: scheduledTime,
-    );
-
-    await FirestoreService.sendMessage(
-      chatId: chatId,
-      message: message,
-    );
+  Stream<List<MessageModel>> messageStream() {
+    return FirebaseFirestore.instance
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .orderBy('timestamp')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => MessageModel.fromMap(doc.data() as Map<String, dynamic>))
+            .toList());
   }
 
-  // Periodically check and send scheduled messages
-  void startScheduledMessageChecker(String chatId) {
-    _scheduledChecker?.cancel();
-    _scheduledChecker = Timer.periodic(const Duration(seconds: 15), (_) {
-      FirestoreService.checkAndSendScheduledMessages(chatId);
-    });
+  Future<void> sendMessage(String text) async {
+    if (text.trim().isEmpty) return;
+    final message = {
+      'text': text.trim(),
+      'senderId': currentUser.uid,
+      'receiverId': receiver.uid,
+      'timestamp': FieldValue.serverTimestamp(),
+      'status': 'sent',
+    };
+
+    await FirebaseFirestore.instance
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .add(message);
+
+    await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+      'lastMessage': text.trim(),
+      'lastMessageTime': FieldValue.serverTimestamp(),
+      'participants': [currentUser.uid, receiver.uid],
+      'unreadCounts': {
+        receiver.uid: FieldValue.increment(1),
+        currentUser.uid: 0,
+      },
+    }, SetOptions(merge: true));
   }
 
-  void stopScheduledMessageChecker() {
-    _scheduledChecker?.cancel();
-  }
+  /// Call this when the chat screen is opened by the receiver to mark messages as seen
+  Future<void> markMessagesAsSeen() async {
+    final unreadMessages = await FirebaseFirestore.instance
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .where('receiverId', isEqualTo: currentUser.uid)
+        .where('status', isNotEqualTo: 'seen')
+        .get();
 
-  // Fetch messages stream for a chat (now returns List<MessageModel>)
-  Stream<List<MessageModel>> messagesStream(String chatId) {
-    return FirestoreService.fetchMessages(chatId);
+    for (final doc in unreadMessages.docs) {
+      await doc.reference.update({'status': 'seen'});
+    }
+
+    // Reset unread count for this user in the chat doc
+    await FirebaseFirestore.instance
+        .collection('chats')
+        .doc(chatId)
+        .update({'unreadCounts.${currentUser.uid}': 0});
   }
 }

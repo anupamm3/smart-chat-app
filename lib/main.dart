@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/features/users/screens/new_chat_screen.dart';
 import 'package:smart_chat_app/firebase_options.dart';
+import 'package:smart_chat_app/models/user_model.dart';
 import 'features/auth/screens/phone_onboarding_screen.dart';
 import 'features/auth/screens/otp_verification_screen.dart';
 import 'features/home/screens/home_screen.dart';
@@ -61,7 +62,10 @@ class SmartChatApp extends StatelessWidget {
         AppRoutes.onboarding: (context) => const PhoneOnboardingScreen(),
         AppRoutes.otp: (context) => const OTPVerificationScreen(),
         AppRoutes.home: (context) => const HomeScreen(),
-        AppRoutes.chat: (context) => const ChatScreen(),
+        AppRoutes.chat: (context) {
+          final user = ModalRoute.of(context)!.settings.arguments as UserModel;
+          return ChatScreen(receiver: user);
+        },
         AppRoutes.newChat: (context) => const NewChatScreen(),
       },
     );

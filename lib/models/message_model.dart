@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:smart_chat_app/widgets/messege_bubble.dart';
 
 class MessageModel {
   final String senderId;
   final String receiverId;
   final String text;
   final DateTime? timestamp;
+  final MessageStatus status;
   final bool isScheduled;
   final DateTime? scheduledTime;
 
@@ -13,6 +15,7 @@ class MessageModel {
     required this.receiverId,
     required this.text,
     this.timestamp,
+    required this.status,
     this.isScheduled = false,
     this.scheduledTime,
   });
@@ -25,6 +28,10 @@ class MessageModel {
       timestamp: map['timestamp'] != null
           ? (map['timestamp'] as Timestamp).toDate()
           : null,
+          status: MessageStatus.values.firstWhere(
+        (e) => e.name == (map['status'] ?? 'sent'),
+        orElse: () => MessageStatus.sent,
+      ),
       isScheduled: map['isSent'] == false, // If not sent, it's scheduled
       scheduledTime: map['scheduledTime'] != null
           ? (map['scheduledTime'] as Timestamp).toDate()
@@ -38,6 +45,7 @@ class MessageModel {
       'receiverId': receiverId,
       'text': text,
       'timestamp': timestamp,
+      'status': status.name,
       'isSent': !isScheduled,
       'scheduledTime': scheduledTime,
     };
