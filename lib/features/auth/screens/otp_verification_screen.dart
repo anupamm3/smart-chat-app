@@ -75,7 +75,6 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
           final userModel = UserModel(
             uid: user.uid,
             name: user.phoneNumber ?? '',
-            email: '',
             photoUrl: '',
             phoneNumber: user.phoneNumber ?? '',
             createdAt: DateTime.now(),
