@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 
 class OTPVerificationScreen extends ConsumerStatefulWidget {
@@ -75,14 +76,14 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
             uid: user.uid,
             name: user.phoneNumber ?? '',
             email: '',
-            profilePic: '',
+            photoUrl: '',
             phoneNumber: user.phoneNumber ?? '',
             createdAt: DateTime.now(),
           );
           await userDoc.set(userModel.toMap());
         }
         if (mounted) {
-          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+          Navigator.pushNamedAndRemoveUntil(context, AppRoutes.home, (route) => false);
         }
       } else {
         setState(() => _error = "Verification failed. Try again.");

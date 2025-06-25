@@ -5,7 +5,7 @@ class UserModel {
   final String uid;
   final String name;
   final String email;
-  final String profilePic;
+  final String photoUrl;
   final String phoneNumber;
   final DateTime? createdAt;
 
@@ -13,7 +13,7 @@ class UserModel {
     required this.uid,
     required this.name,
     required this.email,
-    required this.profilePic,
+    required this.photoUrl,
     this.phoneNumber = '',
     this.createdAt,
   });
@@ -23,7 +23,7 @@ class UserModel {
       uid: map['uid'] ?? '',
       name: map['name'] ?? '',
       email: map['email'] ?? '',
-      profilePic: map['photoUrl'] ?? '',
+      photoUrl: map['photoUrl'] ?? '',
       phoneNumber: map['phoneNumber'] ?? '',
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] is Timestamp
@@ -38,7 +38,7 @@ class UserModel {
       'uid': uid,
       'name': name,
       'email': email,
-      'photoUrl': profilePic,
+      'photoUrl': photoUrl,
       'phoneNumber': phoneNumber,
       'createdAt': createdAt,
     };
@@ -49,7 +49,7 @@ class UserModel {
       uid: user.uid,
       name: user.displayName ?? '',
       email: user.email ?? '',
-      profilePic: user.photoURL ?? '',
+      photoUrl: user.photoURL ?? '',
       phoneNumber: user.phoneNumber ?? '',
       createdAt: DateTime.now(),
     );

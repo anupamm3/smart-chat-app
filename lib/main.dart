@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:smart_chat_app/constants.dart';
+import 'package:smart_chat_app/features/users/screens/new_chat_screen.dart';
 import 'package:smart_chat_app/firebase_options.dart';
-
 import 'features/auth/screens/phone_onboarding_screen.dart';
 import 'features/auth/screens/otp_verification_screen.dart';
 import 'features/home/screens/home_screen.dart';
@@ -57,10 +58,11 @@ class SmartChatApp extends StatelessWidget {
         },
       ),
       routes: {
-        '/onboarding': (context) => const PhoneOnboardingScreen(),
-        '/otp': (context) => const OTPVerificationScreen(),
-        '/home': (context) => const HomeScreen(),
-        '/chat': (context) => const ChatScreen(),
+        AppRoutes.onboarding: (context) => const PhoneOnboardingScreen(),
+        AppRoutes.otp: (context) => const OTPVerificationScreen(),
+        AppRoutes.home: (context) => const HomeScreen(),
+        AppRoutes.chat: (context) => const ChatScreen(),
+        AppRoutes.newChat: (context) => const NewChatScreen(),
       },
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/features/auth/controller/auth_controller.dart';
 
 class PhoneOnboardingScreen extends ConsumerStatefulWidget {
@@ -42,7 +43,7 @@ class _PhoneOnboardingScreenState extends ConsumerState<PhoneOnboardingScreen> {
     ref.read(authControllerProvider.notifier).signInWithPhone(
       phoneNumber: '$_countryCode$phone',
       codeSent: (verificationId) {
-        Navigator.pushNamed(context, '/otp', arguments: {
+        Navigator.pushNamed(context, AppRoutes.otp, arguments: {
           'verificationId': verificationId,
           'phone': '$_countryCode$phone',
         });

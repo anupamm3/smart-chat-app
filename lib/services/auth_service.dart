@@ -19,7 +19,7 @@ class AuthService {
             uid: user.uid,
             name: user.phoneNumber ?? '',
             email: '',
-            profilePic: '',
+            photoUrl: '',
             phoneNumber: user.phoneNumber ?? '',
             createdAt: DateTime.now(),
           );
