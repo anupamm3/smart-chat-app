@@ -5,4 +5,7 @@ class AppRoutes {
   static const chat = '/chat';
   static const newChat = '/new_chat';
   static const profile = '/profile';
+  static const groupChat = '/group_chat';
+  static const groupChatRoom = '/group_chat_room';
+  static const groupContactPicker = '/group_contact_picker';
 }
