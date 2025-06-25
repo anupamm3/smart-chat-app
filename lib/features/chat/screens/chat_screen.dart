@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/features/chat/controller/chat_controller.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/models/message_model.dart';
@@ -26,6 +29,7 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  String? _localContactName;
 
   @override
   void initState() {
@@ -33,7 +37,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // Mark messages as seen when chat is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(chatControllerProvider(widget.receiver)).markMessagesAsSeen();
+      _fetchLocalContactName();
     });
+  }
+
+  Future<void> _fetchLocalContactName() async {
+    // Check permission status first
+    var status = await Permission.contacts.status;
+    if (!status.isGranted) {
+      status = await Permission.contacts.request();
+      if (!status.isGranted) {
+        // Optionally show a dialog and open app settings if denied forever
+        if (status.isPermanentlyDenied) {
+          await openAppSettings();
+        }
+        return;
+      }
+    }
+
+    // Now safe to fetch contacts
+    final contacts = await FlutterContacts.getContacts(withProperties: true);
+    final phone = widget.receiver.phoneNumber.replaceAll(RegExp(r'\D'), '');
+    for (final contact in contacts) {
+      for (final item in contact.phones) {
+        final contactPhone = item.number.replaceAll(RegExp(r'\D'), '');
+        if (contactPhone.endsWith(phone)) {
+          setState(() {
+            _localContactName = contact.displayName;
+          });
+          return;
+        }
+      }
+    }
   }
 
   void _sendMessage(ChatController chatController) async {
@@ -62,21 +97,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         leading: BackButton(color: colorScheme.primary),
         title: Row(
           children: [
-            CircleAvatar(
-              backgroundImage: widget.receiver.photoUrl.isNotEmpty
-                  ? NetworkImage(widget.receiver.photoUrl)
-                  : null,
-              backgroundColor: colorScheme.primaryContainer,
-              child: widget.receiver.photoUrl.isEmpty
-                  ? Icon(Icons.person, color: colorScheme.primary)
-                  : null,
+            GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.profile,
+                  arguments: widget.receiver,
+                );
+              },
+              child: CircleAvatar(
+                backgroundImage: widget.receiver.photoUrl.isNotEmpty
+                    ? NetworkImage(widget.receiver.photoUrl)
+                    : null,
+                backgroundColor: colorScheme.primaryContainer,
+                child: widget.receiver.photoUrl.isEmpty
+                    ? Icon(Icons.person, color: colorScheme.primary)
+                    : null,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                widget.receiver.name.isNotEmpty
-                    ? widget.receiver.name
-                    : widget.receiver.phoneNumber,
+                _localContactName?.isNotEmpty == true
+                    ? _localContactName!
+                    : (widget.receiver.name.isNotEmpty
+                        ? widget.receiver.name
+                        : widget.receiver.phoneNumber),
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w600,
                   color: colorScheme.onSurface,

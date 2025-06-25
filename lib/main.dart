@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/constants.dart';
+import 'package:smart_chat_app/features/profile/screens/user_profile_screen.dart';
 import 'package:smart_chat_app/features/users/screens/new_chat_screen.dart';
 import 'package:smart_chat_app/firebase_options.dart';
 import 'package:smart_chat_app/models/user_model.dart';
@@ -67,6 +68,10 @@ class SmartChatApp extends StatelessWidget {
           return ChatScreen(receiver: user);
         },
         AppRoutes.newChat: (context) => const NewChatScreen(),
+        AppRoutes.profile: (context) {
+          final user = ModalRoute.of(context)!.settings.arguments as UserModel;
+          return UserProfileScreen(user: user);
+        },
       },
     );
   }
