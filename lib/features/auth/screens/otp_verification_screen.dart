@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -14,7 +15,9 @@ class OTPVerificationScreen extends ConsumerStatefulWidget {
 }
 
 class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
-  final TextEditingController _otpController = TextEditingController();
+  final List<TextEditingController> _controllers =
+      List.generate(6, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isLoading = false;
   String? _error;
   int _seconds = 60;
@@ -43,9 +46,12 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
     });
   }
 
+  String get _otpCode =>
+      _controllers.map((c) => c.text.trim()).join();
+
   Future<void> _verifyOtp() async {
-    final code = _otpController.text.trim();
-    if (code.length != 6) {
+    HapticFeedback.lightImpact();
+    if (_otpCode.length != 6 || _otpCode.contains(RegExp(r'[^0-9]'))) {
       setState(() => _error = "Please enter the 6-digit code.");
       return;
     }
@@ -56,7 +62,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
     try {
       final credential = PhoneAuthProvider.credential(
         verificationId: verificationId!,
-        smsCode: code,
+        smsCode: _otpCode,
       );
       final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       final user = userCredential.user;
@@ -111,6 +117,10 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
           _isLoading = false;
         });
         _startTimer();
+        for (final c in _controllers) {
+          c.clear();
+        }
+        _focusNodes[0].requestFocus();
       },
       codeAutoRetrievalTimeout: (_) {
         setState(() => _isLoading = false);
@@ -121,8 +131,105 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
   @override
   void dispose() {
     _timer?.cancel();
-    _otpController.dispose();
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    for (final f in _focusNodes) {
+      f.dispose();
+    }
     super.dispose();
+  }
+
+  Widget _buildOtpFields(ColorScheme colorScheme, bool isDark) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(6, (i) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: 44,
+          height: 56,
+          decoration: BoxDecoration(
+            color: colorScheme.surface.withAlpha(isDark ? (0.45 * 255).toInt() : (0.65 * 255).toInt()),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _focusNodes[i].hasFocus
+                  ? colorScheme.primary
+                  : colorScheme.outline.withAlpha(60),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.outline.withAlpha((0.06 * 255).toInt()),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: TextField(
+            controller: _controllers[i],
+            focusNode: _focusNodes[i],
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            maxLength: 1,
+            style: GoogleFonts.poppins(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface,
+            ),
+            decoration: const InputDecoration(
+              counterText: '',
+              border: InputBorder.none,
+            ),
+            enabled: !_isLoading,
+            textInputAction: i < 5 ? TextInputAction.next : TextInputAction.done,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            onChanged: (val) {
+              // Handle paste
+              if (val.length > 1) {
+                final chars = val.split('');
+                for (int j = 0; j < 6; j++) {
+                  _controllers[j].text = (j < chars.length) ? chars[j] : '';
+                }
+                _focusNodes[5].requestFocus();
+                return;
+              }
+              // Forward typing
+              if (val.isNotEmpty) {
+                _controllers[i].text = val[val.length - 1];
+                if (i < 5) {
+                  _focusNodes[i + 1].requestFocus();
+                } else {
+                  _focusNodes[i].unfocus();
+                }
+                _controllers[i].selection = TextSelection.fromPosition(
+                  TextPosition(offset: _controllers[i].text.length),
+                );
+              }
+              // Backspace: if field is empty and not first, move focus back
+              else if (val.isEmpty && i > 0) {
+                _focusNodes[i - 1].requestFocus();
+                _controllers[i - 1].selection = TextSelection.fromPosition(
+                  TextPosition(offset: _controllers[i - 1].text.length),
+                );
+              }
+            },
+            onTap: () {
+              _controllers[i].selection = TextSelection(
+                baseOffset: 0,
+                extentOffset: _controllers[i].text.length,
+              );
+            },
+            onSubmitted: (_) {
+              if (i == 5) _verifyOtp();
+            },
+            onEditingComplete: () {},
+          ),
+        );
+      }),
+    );
   }
 
   @override
@@ -179,45 +286,11 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  // OTP input fields
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(6, (i) {
-                      return Container(
-                        width: 44,
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        child: TextField(
-                          controller: TextEditingController(
-                            text: _otpController.text.length > i ? _otpController.text[i] : '',
-                          ),
-                          onChanged: (val) {
-                            if (val.isNotEmpty && i < 5) {
-                              _otpController.text = _otpController.text.padRight(i, ' ') + val;
-                              FocusScope.of(context).nextFocus();
-                            } else if (val.isEmpty && i > 0) {
-                              FocusScope.of(context).previousFocus();
-                            }
-                          },
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          maxLength: 1,
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            color: colorScheme.onSurface,
-                          ),
-                          decoration: InputDecoration(
-                            counterText: '',
-                            filled: true,
-                            fillColor: colorScheme.surface.withAlpha(isDark ? (0.45 * 255).toInt() : (0.65 * 255).toInt()),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          enabled: !_isLoading,
-                        ),
-                      );
-                    }),
+                  // OTP input fields with animation and improved UX
+                  AnimatedOpacity(
+                    duration: const Duration(milliseconds: 400),
+                    opacity: !_isLoading ? 1.0 : 0.5,
+                    child: _buildOtpFields(colorScheme, isDark),
                   ),
                   const SizedBox(height: 18),
                   // Timer or resend
@@ -250,28 +323,32 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
                       ),
                     ),
                   const SizedBox(height: 32),
-                  // Verify button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: colorScheme.onPrimary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                  // Verify button with animation
+                  AnimatedOpacity(
+                    duration: const Duration(milliseconds: 400),
+                    opacity: !_isLoading ? 1.0 : 0.5,
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                          elevation: 0,
                         ),
-                        textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                        elevation: 0,
+                        onPressed: _isLoading ? null : _verifyOtp,
+                        child: _isLoading
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text("Verify"),
                       ),
-                      onPressed: _isLoading ? null : _verifyOtp,
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text("Verify"),
                     ),
                   ),
                 ],

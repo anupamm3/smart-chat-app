@@ -232,7 +232,7 @@ class _PhoneOnboardingScreenState extends ConsumerState<PhoneOnboardingScreen> {
                         ),
                         onChanged: (phone) {
                           setState(() {
-                            _countryCode = '+${phone.countryCode}';
+                            _countryCode = phone.countryCode;
                           });
                         },
                         enabled: !isLoading,
