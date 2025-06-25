@@ -157,7 +157,7 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
       // Optionally: You can also create a welcome message in groups/{groupId}/messages
 
       setState(() => _creating = false);
-      Navigator.of(context).popUntil((route) => route.settings.name == AppRoutes.groupChat);
+      Navigator.pop(context, true); // Pops GroupCreateScreen
     } catch (e) {
       setState(() => _creating = false);
       ScaffoldMessenger.of(context).showSnackBar(
