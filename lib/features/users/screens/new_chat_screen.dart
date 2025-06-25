@@ -19,6 +19,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
   List<UserModel> _matchedUsers = [];
   Map<String, String> _contactNameByPhone = {};
   final _currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  String _search = "";
 
   @override
   void initState() {
@@ -96,17 +97,57 @@ class _NewChatScreenState extends State<NewChatScreen> {
   }
 
   String _normalizePhone(String phone) {
-    // Remove spaces, dashes, parentheses, and leading zeros
     var normalized = phone.replaceAll(RegExp(r'[^\d+]'), '');
-    // If starts with 00, replace with +
     if (normalized.startsWith('00')) {
       normalized = '+${normalized.substring(2)}';
     }
-    // If doesn't start with + and is long enough, add +
     if (!normalized.startsWith('+') && normalized.length >= 10) {
       normalized = '+$normalized';
     }
     return normalized;
+  }
+
+  List<UserModel> get _filteredUsers {
+    List<UserModel> filtered;
+    if (_search.trim().isEmpty) {
+      filtered = List<UserModel>.from(_matchedUsers);
+    } else {
+      final query = _search.trim().toLowerCase();
+      filtered = _matchedUsers.where((user) {
+        final normalizedPhone = _normalizePhone(user.phoneNumber);
+        final normalizedPhoneNoPlus = normalizedPhone.startsWith('+')
+            ? normalizedPhone.substring(1)
+            : normalizedPhone;
+        final last10 = normalizedPhone.length >= 10
+            ? normalizedPhone.substring(normalizedPhone.length - 10)
+            : normalizedPhone;
+        final contactName =
+            _contactNameByPhone[normalizedPhone] ??
+            _contactNameByPhone[normalizedPhoneNoPlus] ??
+            _contactNameByPhone[last10] ??
+            "";
+        return contactName.toLowerCase().contains(query) ||
+            user.phoneNumber.contains(query) ||
+            user.name.toLowerCase().contains(query);
+      }).toList();
+    }
+
+    // Sort alphabetically by contact name (or phone number if no contact name)
+    filtered.sort((a, b) {
+      final aNorm = _normalizePhone(a.phoneNumber);
+      final bNorm = _normalizePhone(b.phoneNumber);
+      final aName = _contactNameByPhone[aNorm] ??
+          _contactNameByPhone[aNorm.startsWith('+') ? aNorm.substring(1) : aNorm] ??
+          _contactNameByPhone[aNorm.length >= 10 ? aNorm.substring(aNorm.length - 10) : aNorm] ??
+          a.phoneNumber;
+      final bName = _contactNameByPhone[bNorm] ??
+          _contactNameByPhone[bNorm.startsWith('+') ? bNorm.substring(1) : bNorm] ??
+          _contactNameByPhone[bNorm.length >= 10 ? bNorm.substring(bNorm.length - 10) : bNorm] ??
+          b.phoneNumber;
+      return aName.toLowerCase().compareTo(bName.toLowerCase());
+    });
+
+    return filtered;
   }
 
   @override
@@ -122,81 +163,156 @@ class _NewChatScreenState extends State<NewChatScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _matchedUsers.isEmpty
-              ? Center(
-                  child: Text(
-                    "No contacts using SmartChat yet",
-                    style: GoogleFonts.poppins(
-                      color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
-                      fontSize: 16,
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.person_add_alt_1),
+        label: Text(
+          "Invite",
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        onPressed: () {
+          // TODO: Implement invite/share logic
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Invite feature coming soon!")),
+          );
+        },
+      ),
+      body: RefreshIndicator(
+        onRefresh: _fetchContactsAndUsers,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Material(
+                elevation: 1,
+                borderRadius: BorderRadius.circular(16),
+                child: TextField(
+                  onChanged: (val) => setState(() => _search = val),
+                  style: GoogleFonts.poppins(),
+                  decoration: InputDecoration(
+                    hintText: "Search contacts...",
+                    hintStyle: GoogleFonts.poppins(
+                      color: colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
+                    ),
+                    prefixIcon: Icon(Icons.search, color: colorScheme.primary),
+                    filled: true,
+                    fillColor: colorScheme.surface.withAlpha(230),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
                     ),
                   ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: _matchedUsers.length,
-                  separatorBuilder: (_, __) => Divider(
-                    color: colorScheme.outline.withAlpha((0.08 * 255).toInt()),
-                    height: 0,
-                  ),
-                  itemBuilder: (context, index) {
-                    final user = _matchedUsers[index];
-                    final normalizedPhone = _normalizePhone(user.phoneNumber);
-                    final normalizedPhoneNoPlus = normalizedPhone.startsWith('+')
-                        ? normalizedPhone.substring(1)
-                        : normalizedPhone;
-                    final last10 = normalizedPhone.length >= 10
-                        ? normalizedPhone.substring(normalizedPhone.length - 10)
-                        : normalizedPhone;
-
-                    // Try all possible keys for contact name
-                    final contactName =
-                        _contactNameByPhone[normalizedPhone] ??
-                        _contactNameByPhone[normalizedPhoneNoPlus] ??
-                        _contactNameByPhone[last10];
-
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: user.photoUrl.isNotEmpty
-                            ? NetworkImage(user.photoUrl)
-                            : null,
-                        backgroundColor: colorScheme.primaryContainer,
-                        child: user.photoUrl.isEmpty
-                            ? Icon(Icons.person, color: colorScheme.primary)
-                            : null,
-                      ),
-                      title: Text(
-                        (contactName != null && contactName.isNotEmpty)
-                            ? contactName
-                            : user.phoneNumber,
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                      subtitle: user.email.isNotEmpty
-                          ? Text(
-                              user.email,
-                              style: GoogleFonts.poppins(
-                                color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
-                              ),
-                            )
-                          : null,
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          AppRoutes.chat,
-                          arguments: {
-                            'otherUserId': user.uid,
-                            'otherUserName': contactName ?? user.phoneNumber,
-                          },
-                        );
-                      },
-                    );
-                  }
                 ),
+              ),
+            ),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _filteredUsers.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.person_off_outlined,
+                                  size: 64,
+                                  color: colorScheme.primary.withAlpha(80)),
+                              const SizedBox(height: 16),
+                              Text(
+                                "No contacts found using SmartChat",
+                                style: GoogleFonts.poppins(
+                                  color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          itemCount: _filteredUsers.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final user = _filteredUsers[index];
+                            final normalizedPhone = _normalizePhone(user.phoneNumber);
+                            final normalizedPhoneNoPlus = normalizedPhone.startsWith('+')
+                                ? normalizedPhone.substring(1)
+                                : normalizedPhone;
+                            final last10 = normalizedPhone.length >= 10
+                                ? normalizedPhone.substring(normalizedPhone.length - 10)
+                                : normalizedPhone;
+
+                            final contactName =
+                                _contactNameByPhone[normalizedPhone] ??
+                                _contactNameByPhone[normalizedPhoneNoPlus] ??
+                                _contactNameByPhone[last10];
+
+                            return Card(
+                              elevation: 1,
+                              margin: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              color: colorScheme.surface.withAlpha(
+                                  Theme.of(context).brightness == Brightness.dark ? 180 : 240),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                                leading: CircleAvatar(
+                                  radius: 26,
+                                  backgroundImage: user.photoUrl.isNotEmpty
+                                      ? NetworkImage(user.photoUrl)
+                                      : null,
+                                  backgroundColor: colorScheme.primaryContainer,
+                                  child: user.photoUrl.isEmpty
+                                      ? Text(
+                                          (contactName != null && contactName.isNotEmpty)
+                                              ? contactName[0].toUpperCase()
+                                              : user.phoneNumber[0],
+                                          style: GoogleFonts.poppins(
+                                            color: colorScheme.primary,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 22,
+                                          ),
+                                        )
+                                      : null,
+                                ),
+                                title: Text(
+                                  (contactName != null && contactName.isNotEmpty)
+                                      ? contactName
+                                      : user.phoneNumber,
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    color: colorScheme.onSurface,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  (contactName != null && contactName.isNotEmpty)
+                                      ? "In your contacts"
+                                      : "SmartChat user",
+                                  style: GoogleFonts.poppins(
+                                    color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                trailing: Icon(Icons.arrow_forward_ios_rounded,
+                                    color: colorScheme.primary, size: 22),
+                                onTap: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    AppRoutes.chat,
+                                    arguments: {
+                                      'otherUserId': user.uid,
+                                      'otherUserName': contactName ?? user.phoneNumber,
+                                    },
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
