@@ -5,7 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/firebase_options.dart';
 
-import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/phone_onboarding_screen.dart';
+import 'features/auth/screens/otp_verification_screen.dart';
 import 'features/home/screens/home_screen.dart';
 import 'features/chat/screens/chat_screen.dart';
 
@@ -52,11 +53,12 @@ class SmartChatApp extends StatelessWidget {
           if (snapshot.hasData && snapshot.data != null) {
             return const HomeScreen();
           }
-          return const LoginScreen();
+          return const PhoneOnboardingScreen();
         },
       ),
       routes: {
-        '/login': (context) => const LoginScreen(),
+        '/onboarding': (context) => const PhoneOnboardingScreen(),
+        '/otp': (context) => const OTPVerificationScreen(),
         '/home': (context) => const HomeScreen(),
         '/chat': (context) => const ChatScreen(),
       },

@@ -1,49 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
-  static final GoogleSignIn _googleSignIn = GoogleSignIn();
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  /// Google Sign-In. Returns Firebase [User] on success, null on failure.
-  static Future<User?> signInWithGoogle() async {
-    try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
-
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential = await _auth.signInWithCredential(credential);
-      final user = userCredential.user;
-
-      if (user != null) {
-        // Check if user exists in Firestore, else save new user
-        final userDoc = _firestore.collection('users').doc(user.uid);
-        final doc = await userDoc.get();
-        if (!doc.exists) {
-          final userModel = UserModel(
-            uid: user.uid,
-            name: user.displayName ?? '',
-            email: user.email ?? '',
-            profilePic: user.photoURL ?? '',
-            phoneNumber: user.phoneNumber ?? '',
-            createdAt: DateTime.now(),
-          );
-          await userDoc.set(userModel.toMap());
-        }
-      }
-      return user;
-    } catch (e) {
-      return null;
-    }
-  }
 
   /// Phone Sign-In: returns User on success, null on failure
   static Future<User?> signInWithPhoneCredential(PhoneAuthCredential credential) async {
@@ -66,14 +27,27 @@ class AuthService {
         }
       }
       return user;
+    } on FirebaseAuthException catch (e) {
+      // You can log or handle specific FirebaseAuth errors here
+      print('FirebaseAuthException: ${e.code} - ${e.message}');
+      return null;
+    } on FirebaseException catch (e) {
+      // Handle Firestore errors
+      print('FirebaseException: ${e.code} - ${e.message}');
+      return null;
     } catch (e) {
+      // Handle any other errors
+      print('Unknown error in signInWithPhoneCredential: $e');
       return null;
     }
   }
 
-  /// Sign out from Firebase and Google
+  /// Sign out from Firebase
   static Future<void> signOut() async {
-    await _auth.signOut();
-    await _googleSignIn.signOut();
+    try {
+      await _auth.signOut();
+    } catch (e) {
+      print('Error during sign out: $e');
+    }
   }
 }
