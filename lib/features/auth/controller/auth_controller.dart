@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:smart_chat_app/services/auth_service.dart';
 
 class AuthState {
   final bool isLoading;
@@ -16,7 +15,6 @@ class AuthController extends StateNotifier<AuthState> {
   AuthController() : super(AuthState());
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<void> signInWithPhone({
     required String phoneNumber,
@@ -52,26 +50,9 @@ class AuthController extends StateNotifier<AuthState> {
         verificationId: verificationId,
         smsCode: smsCode,
       );
-      final userCredential = await _auth.signInWithCredential(credential);
-      final user = userCredential.user;
-      if (user != null) {
-        // Store user details in Firestore if not exists
-        final userDoc = _firestore.collection('users').doc(user.uid);
-        final doc = await userDoc.get();
-        if (!doc.exists) {
-          await userDoc.set({
-            'uid': user.uid,
-            'name': user.phoneNumber ?? '',
-            'email': '',
-            'photoUrl': '',
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-        }
-        state = state.copyWith(isLoading: false);
-        return true;
-      }
+      final user = await AuthService.signInWithPhoneCredential(credential);
       state = state.copyWith(isLoading: false);
-      return false;
+      return user != null;
     } catch (e) {
       state = state.copyWith(isLoading: false);
       return false;
@@ -81,41 +62,9 @@ class AuthController extends StateNotifier<AuthState> {
   Future<bool> signInWithGoogle() async {
     try {
       state = state.copyWith(isLoading: true);
-
-      final googleSignIn = GoogleSignIn();
-      final googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
-        state = state.copyWith(isLoading: false);
-        return false;
-      }
-
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential = await _auth.signInWithCredential(credential);
-      final user = userCredential.user;
-
-      if (user != null) {
-        // Store user details in Firestore if not exists
-        final userDoc = _firestore.collection('users').doc(user.uid);
-        final doc = await userDoc.get();
-        if (!doc.exists) {
-          await userDoc.set({
-            'uid': user.uid,
-            'name': user.displayName ?? '',
-            'email': user.email ?? '',
-            'photoUrl': user.photoURL ?? '',
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-        }
-        state = state.copyWith(isLoading: false);
-        return true;
-      }
+      final user = await AuthService.signInWithGoogle();
       state = state.copyWith(isLoading: false);
-      return false;
+      return user != null;
     } catch (e) {
       state = state.copyWith(isLoading: false);
       return false;
@@ -123,8 +72,7 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   Future<void> signOut() async {
-    await GoogleSignIn().signOut();
-    await _auth.signOut();
+    await AuthService.signOut();
   }
 }
 

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class UserModel {
@@ -5,12 +6,16 @@ class UserModel {
   final String name;
   final String email;
   final String profilePic;
+  final String phoneNumber;
+  final DateTime? createdAt;
 
   UserModel({
     required this.uid,
     required this.name,
     required this.email,
     required this.profilePic,
+    this.phoneNumber = '',
+    this.createdAt,
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -19,6 +24,12 @@ class UserModel {
       name: map['name'] ?? '',
       email: map['email'] ?? '',
       profilePic: map['photoUrl'] ?? '',
+      phoneNumber: map['phoneNumber'] ?? '',
+      createdAt: map['createdAt'] != null
+          ? (map['createdAt'] is Timestamp
+              ? (map['createdAt'] as Timestamp).toDate()
+              : DateTime.tryParse(map['createdAt'].toString()))
+          : null,
     );
   }
 
@@ -28,6 +39,8 @@ class UserModel {
       'name': name,
       'email': email,
       'photoUrl': profilePic,
+      'phoneNumber': phoneNumber,
+      'createdAt': createdAt,
     };
   }
 
@@ -37,6 +50,8 @@ class UserModel {
       name: user.displayName ?? '',
       email: user.email ?? '',
       profilePic: user.photoURL ?? '',
+      phoneNumber: user.phoneNumber ?? '',
+      createdAt: DateTime.now(),
     );
   }
 }
