@@ -7,6 +7,42 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:118630022353:android:ac3b331b4f3aa505fad9f0",
+        "android_client_info": {
+          "package_name": "com.anupamarya.smartchatapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "118630022353-o24thmhegg4rbnfk4o5q9kliuc5ok6f4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAZj32nonviQXesmjkrFk1OvAtbiYTkbRE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "118630022353-o24thmhegg4rbnfk4o5q9kliuc5ok6f4.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "118630022353-mc9r6lojlsobe7k8k8f19ia8p84igjln.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.smartChatApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:118630022353:android:96bc3b07715a3862fad9f0",
         "android_client_info": {
           "package_name": "com.example.smart_chat_app"
