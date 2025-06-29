@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:lottie/lottie.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/features/auth/controller/auth_controller.dart';
 import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
@@ -72,7 +73,16 @@ class _PhoneOnboardingScreenState extends ConsumerState<PhoneOnboardingScreen> {
               children: [
                 // App name/logo
                 const SizedBox(height: 24),
-                Icon(Icons.chat_bubble_rounded, size: 64, color: colorScheme.primary),
+                // Icon(Icons.chat_bubble_rounded, size: 64, color: colorScheme.primary),
+                SizedBox(
+                  height: 200,
+                  width: 200,
+                  child: Lottie.asset(
+                    'assets/lottie/chat_icon.json',
+                    // fit: BoxFit.cover,
+                    // repeat: false,
+                  ),
+                ),
                 const SizedBox(height: 12),
                 Text(
                   "SmartChat",
