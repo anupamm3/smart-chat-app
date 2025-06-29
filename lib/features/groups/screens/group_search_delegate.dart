@@ -73,7 +73,7 @@ class GroupSearchDelegate extends SearchDelegate<String> {
             close(context, query);
             Navigator.pushNamed(
               context,
-              AppRoutes.groupChatRoom,
+              AppRoutes.groupChat,
               arguments: {'groupId': group.id},
             );
           },

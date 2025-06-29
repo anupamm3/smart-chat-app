@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/features/groups/controller/group_chat_controller.dart';
+import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 import 'package:smart_chat_app/widgets/messege_bubble.dart';
 
 class GroupChatRoomScreen extends StatefulWidget {
@@ -243,7 +244,7 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
-    return Scaffold(
+    return GradientScaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         leading: BackButton(color: colorScheme.primary),

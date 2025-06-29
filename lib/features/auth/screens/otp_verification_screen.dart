@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/models/user_model.dart';
+import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 
 class OTPVerificationScreen extends ConsumerStatefulWidget {
   const OTPVerificationScreen({super.key});
@@ -186,6 +187,9 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
             decoration: const InputDecoration(
               counterText: '',
               border: InputBorder.none,
+              filled: false,
+              fillColor: Colors.transparent,
+              contentPadding: EdgeInsets.zero,
             ),
             enabled: !_isLoading,
             textInputAction: i < 5 ? TextInputAction.next : TextInputAction.done,
@@ -243,122 +247,101 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return GradientScaffold(
       extendBodyBehindAppBar: true,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? [
-                    colorScheme.primaryContainer,
-                    colorScheme.surface,
-                    colorScheme.surfaceContainerHighest,
-                  ]
-                : [
-                    colorScheme.primaryContainer,
-                    colorScheme.surface,
-                    colorScheme.surfaceContainerHighest,
-                  ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 24),
-                  Text(
-                    "Verify your phone number",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
-                    ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 24),
+                Text(
+                  "Verify your phone number",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    "Enter the 6-digit code sent to ${phone ?? ''}",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
-                    ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "Enter the 6-digit code sent to ${phone ?? ''}",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 15,
+                    color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
                   ),
-                  const SizedBox(height: 32),
-                  // OTP input fields with animation and improved UX
-                  AnimatedOpacity(
-                    duration: const Duration(milliseconds: 400),
-                    opacity: !_isLoading ? 1.0 : 0.5,
-                    child: _buildOtpFields(colorScheme, isDark),
-                  ),
-                  const SizedBox(height: 18),
-                  // Timer or resend
-                  _seconds > 0
-                      ? Text(
-                          "Resend code in 00:${_seconds.toString().padLeft(2, '0')}",
-                          style: GoogleFonts.poppins(
-                            color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
-                          ),
-                        )
-                      : TextButton(
-                          onPressed: _isLoading ? null : _resendOtp,
-                          child: Text(
-                            "Resend OTP",
-                            style: GoogleFonts.poppins(
-                              color: colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                  if (_error != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: Text(
-                        _error!,
+                ),
+                const SizedBox(height: 32),
+                // OTP input fields with animation and improved UX
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 400),
+                  opacity: !_isLoading ? 1.0 : 0.5,
+                  child: _buildOtpFields(colorScheme, isDark),
+                ),
+                const SizedBox(height: 18),
+                // Timer or resend
+                _seconds > 0
+                    ? Text(
+                        "Resend code in 00:${_seconds.toString().padLeft(2, '0')}",
                         style: GoogleFonts.poppins(
-                          color: colorScheme.error,
-                          fontWeight: FontWeight.w500,
+                          color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                        ),
+                      )
+                    : TextButton(
+                        onPressed: _isLoading ? null : _resendOtp,
+                        child: Text(
+                          "Resend OTP",
+                          style: GoogleFonts.poppins(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ),
-                  const SizedBox(height: 32),
-                  // Verify button with animation
-                  AnimatedOpacity(
-                    duration: const Duration(milliseconds: 400),
-                    opacity: !_isLoading ? 1.0 : 0.5,
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                          elevation: 0,
-                        ),
-                        onPressed: _isLoading ? null : _verifyOtp,
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 22,
-                                width: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text("Verify"),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(
+                      _error!,
+                      style: GoogleFonts.poppins(
+                        color: colorScheme.error,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                ],
-              ),
+                const SizedBox(height: 32),
+                // Verify button with animation
+                AnimatedOpacity(
+                  duration: const Duration(milliseconds: 400),
+                  opacity: !_isLoading ? 1.0 : 0.5,
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                        elevation: 0,
+                      ),
+                      onPressed: _isLoading ? null : _verifyOtp,
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text("Verify"),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

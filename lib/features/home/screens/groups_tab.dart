@@ -7,6 +7,7 @@ import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/features/groups/controller/group_chat_controller.dart';
 import 'package:smart_chat_app/models/contact_model.dart';
 import 'package:smart_chat_app/utils/contact_utils.dart';
+import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 
 class GroupsTab extends ConsumerStatefulWidget {
   const GroupsTab({super.key});
@@ -17,6 +18,13 @@ class GroupsTab extends ConsumerStatefulWidget {
 
 class _GroupsTabState extends ConsumerState<GroupsTab> {
   String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +33,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
     final groupsAsync = ref.watch(groupListProvider(currentUserId));
 
-    return Scaffold(
+    return GradientScaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -56,6 +64,7 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
             child: SizedBox(
               height: 40,
               child: TextField(
+                controller: _searchController,
                 onChanged: (val) => setState(() => _searchQuery = val),
                 decoration: InputDecoration(
                   hintText: "Search groups...",
@@ -63,6 +72,15 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
                     color: colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
                   ),
                   prefixIcon: Icon(Icons.search, color: colorScheme.primary),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.clear, color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt())),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
                   filled: true,
                   fillColor: colorScheme.surface.withAlpha(isDark ? (0.45 * 255).toInt() : (0.65 * 255).toInt()),
                   contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
@@ -77,111 +95,18 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
           ),
         ),
       ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? [
-                    colorScheme.surfaceContainerHighest,
-                    colorScheme.surface,
-                    colorScheme.primaryContainer
-                  ]
-                : [
-                    colorScheme.primaryContainer,
-                    colorScheme.surface,
-                    colorScheme.surfaceContainerHighest
-                  ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: groupsAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => Center(child: Text('Error: $e')),
-            data: (groups) {
-              final filteredGroups = _searchQuery.isEmpty
-                  ? groups
-                  : groups
-                      .where((g) => g.name.toLowerCase().contains(_searchQuery.toLowerCase()))
-                      .toList();
-              return filteredGroups.isEmpty
-                  ? Center(
-                      child: Text(
-                        "No groups found",
-                        style: GoogleFonts.poppins(
-                          fontSize: 18,
-                          color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
-                        ),
-                      ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                      itemCount: filteredGroups.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final group = filteredGroups[index];
-                        return Material(
-                          color: colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(16),
-                          child: ListTile(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            leading: CircleAvatar(
-                              backgroundImage: group.photoUrl != null && group.photoUrl!.isNotEmpty
-                                  ? NetworkImage(group.photoUrl!)
-                                  : null,
-                              backgroundColor: colorScheme.primaryContainer,
-                              child: group.photoUrl == null || group.photoUrl!.isEmpty
-                                  ? Icon(Icons.groups, color: colorScheme.primary)
-                                  : null,
-                            ),
-                            title: Text(
-                              group.name,
-                              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                            ),
-                            subtitle: Text(
-                              group.lastMessage ?? 'No messages yet',
-                              style: GoogleFonts.poppins(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            trailing: Text(
-                              group.lastMessageTime != null
-                                  ? TimeOfDay.fromDateTime(group.lastMessageTime!).format(context)
-                                  : '',
-                              style: GoogleFonts.poppins(fontSize: 12, color: colorScheme.onSurfaceVariant),
-                            ),
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                AppRoutes.groupChatRoom,
-                                arguments: {
-                                  'groupId': group.id,
-                                  'groupName': group.name,
-                                  'groupPhotoUrl': group.photoUrl,
-                                },
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    );
-            },
-          ),
-        ),
-      ),
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        icon: const Icon(Icons.group_add),
+        label: Text(
+          'Create Group',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
         onPressed: () async {
-          // Fetch and filter contacts using the modular utility
           final matchedContacts = await fetchMatchedContacts(currentUserId);
           if (!mounted) return;
-          // Convert to your ContactModel or pass as needed
           final contacts = matchedContacts.map((mc) {
-            // If you have a ContactModel, adapt this mapping
             return ContactModel(
               id: mc.user.uid,
               phoneNumber: mc.user.phoneNumber,
@@ -200,11 +125,124 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
             );
           }
         },
-        icon: const Icon(Icons.group_add),
-        label: Text('Create Group', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
-        elevation: 4,
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: groupsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, st) => Center(
+              child: Text(
+                'Error: $e',
+                style: GoogleFonts.poppins(
+                  color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                ),
+              ),
+            ),
+            data: (groups) {
+              final filteredGroups = _searchQuery.isEmpty
+                  ? groups
+                  : groups
+                      .where((g) => g.name.toLowerCase().contains(_searchQuery))
+                      .toList();
+              if (filteredGroups.isEmpty) {
+                return Center(
+                  child: Text(
+                    _searchQuery.isEmpty ? 'No groups yet' : 'No groups found for "$_searchQuery"',
+                    style: GoogleFonts.poppins(
+                      color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                    ),
+                  ),
+                );
+              }
+              return ListView.separated(
+                itemCount: filteredGroups.length,
+                separatorBuilder: (_, __) => Divider(
+                  color: colorScheme.outline.withAlpha((0.08 * 255).toInt()),
+                  height: 0,
+                ),
+                itemBuilder: (context, index) {
+                  final group = filteredGroups[index];
+                  return _buildGroupListTile(context, group, colorScheme, isDark);
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGroupListTile(BuildContext context, dynamic group, ColorScheme colorScheme, bool isDark) {
+    return Card(
+      elevation: 1,
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: colorScheme.surface.withAlpha(isDark ? (0.55 * 255).toInt() : (0.85 * 255).toInt()),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundImage: group.photoUrl != null && group.photoUrl!.isNotEmpty
+              ? NetworkImage(group.photoUrl!)
+              : null,
+          backgroundColor: colorScheme.primaryContainer,
+          child: group.photoUrl == null || group.photoUrl!.isEmpty
+              ? Icon(Icons.groups, color: colorScheme.primary)
+              : null,
+        ),
+        title: Text(
+          group.name,
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Show member count if searching and group name matches
+            if (_searchQuery.isNotEmpty && group.name.toLowerCase().contains(_searchQuery))
+              Text(
+                '${group.members?.length ?? 0} members',
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            Text(
+              group.lastMessage ?? 'No messages yet',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+              ),
+            ),
+          ],
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (group.lastMessageTime != null)
+              Text(
+                "${group.lastMessageTime!.hour.toString().padLeft(2, '0')}:${group.lastMessageTime!.minute.toString().padLeft(2, '0')}",
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
+                ),
+              ),
+          ],
+        ),
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            AppRoutes.groupChat,
+            arguments: {
+              'groupId': group.id,
+              'groupName': group.name,
+              'groupPhotoUrl': group.photoUrl,
+            },
+          );
+        },
       ),
     );
   }

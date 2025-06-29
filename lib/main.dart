@@ -4,7 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/constants.dart';
-import 'package:smart_chat_app/features/groups/screens/group_chat_room_screen.dart';
+import 'package:smart_chat_app/features/groups/screens/group_chat_screen.dart';
 import 'package:smart_chat_app/features/groups/screens/group_contact_picker_screen.dart';
 import 'package:smart_chat_app/features/home/screens/groups_tab.dart';
 import 'package:smart_chat_app/features/profile/screens/user_profile_screen.dart';
@@ -41,11 +41,84 @@ class SmartChatApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       themeMode: themeMode,
       title: 'SmartChat',
-      theme: ThemeData.light().copyWith(
+      theme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.light,
         textTheme: GoogleFonts.poppinsTextTheme(),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.light,
+        ),
+        
+        // AppBar theme for consistent look
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: ColorScheme.fromSeed(seedColor: Colors.deepPurple).onSurface,
+          ),
+        ),
+        
+        // Card theme for gradient backgrounds
+        cardTheme: CardThemeData(
+          elevation: 1,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(16)),
+          ),
+          surfaceTintColor: Colors.transparent,
+        ),
+        
+        // Input decoration theme
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+        ),
       ),
-      darkTheme: ThemeData.dark().copyWith(
+
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
         textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+        
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: ColorScheme.fromSeed(
+              seedColor: Colors.deepPurple,
+              brightness: Brightness.dark,
+            ).onSurface,
+          ),
+        ),
+        
+        cardTheme: const CardThemeData(
+          elevation: 1,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(16)),
+          ),
+          surfaceTintColor: Colors.transparent,
+        ),
+        
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide.none,
+          ),
+        ),
       ),
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
@@ -70,12 +143,12 @@ class SmartChatApp extends ConsumerWidget {
           return ChatScreen(receiver: user);
         },
         AppRoutes.newChat: (context) => const NewChatScreen(),
-        AppRoutes.profile: (context) {
+        AppRoutes.profileTab: (context) {
           final user = ModalRoute.of(context)!.settings.arguments as UserModel;
           return UserProfileScreen(user: user);
         },
-        AppRoutes.groupChat: (context) => const GroupsTab(),
-        AppRoutes.groupChatRoom: (context) {
+        AppRoutes.groupsTab: (context) => const GroupsTab(),
+        AppRoutes.groupChat: (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
           return GroupChatRoomScreen(
             groupId: args['groupId'] as String,

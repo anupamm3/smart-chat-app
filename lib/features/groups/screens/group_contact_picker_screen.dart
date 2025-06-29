@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/models/contact_model.dart';
+import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 
 class GroupContactPickerScreen extends StatefulWidget {
   final List<ContactModel> contacts;
@@ -19,7 +20,7 @@ class _GroupContactPickerScreenState extends State<GroupContactPickerScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: Text('Select Contacts', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
         backgroundColor: colorScheme.surface,

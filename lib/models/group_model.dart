@@ -9,6 +9,7 @@ class GroupModel {
   final DateTime createdAt;
   final String? lastMessage;
   final DateTime? lastMessageTime;
+  final Map<String, int>? unreadCounts;
 
   GroupModel({
     required this.id,
@@ -19,6 +20,7 @@ class GroupModel {
     required this.createdAt,
     this.lastMessage,
     this.lastMessageTime,
+    this.unreadCounts,
   });
 
   factory GroupModel.fromMap(String id, Map<String, dynamic> map) {
@@ -33,6 +35,24 @@ class GroupModel {
       lastMessageTime: map['lastMessageTime'] != null
           ? (map['lastMessageTime'] as Timestamp).toDate()
           : null,
+      unreadCounts: map['unreadCounts'] != null
+          ? Map<String, int>.from(map['unreadCounts'])
+          : null,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'photoUrl': photoUrl,
+      'members': members,
+      'createdBy': createdBy,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'lastMessage': lastMessage,
+      'lastMessageTime': lastMessageTime != null 
+          ? Timestamp.fromDate(lastMessageTime!)
+          : null,
+      'unreadCounts': unreadCounts,
+    };
   }
 }

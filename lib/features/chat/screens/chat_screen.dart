@@ -9,6 +9,7 @@ import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/features/chat/controller/chat_controller.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/models/message_model.dart';
+import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 import 'package:smart_chat_app/widgets/messege_bubble.dart';
 
 final chatControllerProvider = Provider.family<ChatController, UserModel>((ref, receiver) {
@@ -214,7 +215,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chatController = ref.watch(chatControllerProvider(widget.receiver));
     final messagesAsync = ref.watch(chatMessagesProvider(widget.receiver));
 
-    return Scaffold(
+    return GradientScaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         leading: BackButton(color: colorScheme.primary),
@@ -224,7 +225,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               onTap: () {
                 Navigator.pushNamed(
                   context,
-                  AppRoutes.profile,
+                  AppRoutes.profileTab,
                   arguments: widget.receiver,
                 );
               },
@@ -259,127 +260,108 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         elevation: 1,
       ),
       body: SafeArea(
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: isDark
-                  ? [
-                      colorScheme.surfaceContainerHighest.withAlpha((0.95 * 255).toInt()),
-                      colorScheme.surface.withAlpha((0.95 * 255).toInt()),
-                      colorScheme.primary.withAlpha((0.10 * 255).toInt()),
-                    ]
-                  : [
-                      colorScheme.primary.withAlpha((0.08 * 255).toInt()),
-                      colorScheme.surface.withAlpha((0.98 * 255).toInt()),
-                      colorScheme.surfaceContainerHighest.withAlpha((0.95 * 255).toInt()),
-                    ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Column(
-            children: [
-              Expanded(
-                child: messagesAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, st) => Center(child: Text('Error: $e')),
-                  data: (messages) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (_scrollController.hasClients) {
-                        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-                      }
-                    });
-          
-                    if (messages.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'No messages yet',
-                          style: GoogleFonts.poppins(
-                            color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
-                          ),
-                        ),
-                      );
+        child: Column(
+          children: [
+            Expanded(
+              child: messagesAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, st) => Center(child: Text('Error: $e')),
+                data: (messages) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_scrollController.hasClients) {
+                      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
                     }
-                    return ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                      itemCount: messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = messages[index];
-                        final isMe = msg.senderId == chatController.currentUser.uid;
-                        final time = msg.timestamp;
-                        return MessageBubble(
-                          text: msg.text,
-                          isMe: isMe,
-                          timestamp: time,
-                          status: isMe ? msg.status : null,
-                        );
-                      },
+                  });
+        
+                  if (messages.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No messages yet',
+                        style: GoogleFonts.poppins(
+                          color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                        ),
+                      ),
                     );
-                  },
-                ),
+                  }
+                  return ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    itemCount: messages.length,
+                    itemBuilder: (context, index) {
+                      final msg = messages[index];
+                      final isMe = msg.senderId == chatController.currentUser.uid;
+                      final time = msg.timestamp;
+                      return MessageBubble(
+                        text: msg.text,
+                        isMe: isMe,
+                        timestamp: time,
+                        status: isMe ? msg.status : null,
+                      );
+                    },
+                  );
+                },
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        style: GoogleFonts.poppins(),
-                        decoration: InputDecoration(
-                          hintText: 'Type a message...',
-                          hintStyle: GoogleFonts.poppins(
-                            color: colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: colorScheme.surfaceContainerHighest,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      style: GoogleFonts.poppins(),
+                      decoration: InputDecoration(
+                        hintText: 'Type a message...',
+                        hintStyle: GoogleFonts.poppins(
+                          color: colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
                         ),
-                        onSubmitted: (_) => _sendMessage(chatController),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Material(
-                      color: colorScheme.primary,
-                      shape: const CircleBorder(),
-                      elevation: 4,
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: _onScheduleMessagePressed,
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Icon(
-                            Icons.schedule,
-                            color: Colors.white,
-                            size: 28,
-                          ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
                         ),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerHighest,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
+                      onSubmitted: (_) => _sendMessage(chatController),
                     ),
-                    const SizedBox(width: 8),
-                    Material(
-                      color: colorScheme.primary,
-                      shape: const CircleBorder(),
-                      elevation: 4,
-                      child: InkWell(
-                        customBorder: const CircleBorder(),
-                        onTap: () => _sendMessage(chatController),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Icon(Icons.send_rounded, color: Colors.white, size: 28),
+                  ),
+                  const SizedBox(width: 8),
+                  Material(
+                    color: colorScheme.primary,
+                    shape: const CircleBorder(),
+                    elevation: 4,
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _onScheduleMessagePressed,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Icon(
+                          Icons.schedule,
+                          color: Colors.white,
+                          size: 28,
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 8),
+                  Material(
+                    color: colorScheme.primary,
+                    shape: const CircleBorder(),
+                    elevation: 4,
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => _sendMessage(chatController),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Icon(Icons.send_rounded, color: Colors.white, size: 28),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
