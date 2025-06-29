@@ -25,7 +25,7 @@ class ChatController {
         .orderBy('timestamp')
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => MessageModel.fromMap(doc.data() as Map<String, dynamic>))
+            .map((doc) => MessageModel.fromMap(doc.data()))
             .where((msg) =>
                 msg.type == null ||
                 msg.type == 'text' ||

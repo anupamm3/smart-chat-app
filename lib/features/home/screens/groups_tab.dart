@@ -8,14 +8,14 @@ import 'package:smart_chat_app/features/groups/controller/group_chat_controller.
 import 'package:smart_chat_app/models/contact_model.dart';
 import 'package:smart_chat_app/utils/contact_utils.dart';
 
-class GroupChatScreen extends ConsumerStatefulWidget {
-  const GroupChatScreen({super.key});
+class GroupsTab extends ConsumerStatefulWidget {
+  const GroupsTab({super.key});
 
   @override
-  ConsumerState<GroupChatScreen> createState() => _GroupChatScreenState();
+  ConsumerState<GroupsTab> createState() => _GroupsTabState();
 }
 
-class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
+class _GroupsTabState extends ConsumerState<GroupsTab> {
   String _searchQuery = '';
 
   @override

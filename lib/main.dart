@@ -5,8 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/features/groups/screens/group_chat_room_screen.dart';
-import 'package:smart_chat_app/features/groups/screens/group_chat_screen.dart';
 import 'package:smart_chat_app/features/groups/screens/group_contact_picker_screen.dart';
+import 'package:smart_chat_app/features/home/screens/groups_tab.dart';
 import 'package:smart_chat_app/features/profile/screens/user_profile_screen.dart';
 import 'package:smart_chat_app/features/users/screens/new_chat_screen.dart';
 import 'package:smart_chat_app/firebase_options.dart';
@@ -74,7 +74,7 @@ class SmartChatApp extends ConsumerWidget {
           final user = ModalRoute.of(context)!.settings.arguments as UserModel;
           return UserProfileScreen(user: user);
         },
-        AppRoutes.groupChat: (context) => const GroupChatScreen(),
+        AppRoutes.groupChat: (context) => const GroupsTab(),
         AppRoutes.groupChatRoom: (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
           return GroupChatRoomScreen(
