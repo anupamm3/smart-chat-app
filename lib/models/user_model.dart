@@ -1,57 +1,59 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class UserModel {
   final String uid;
-  final String name;
-  final String photoUrl;
   final String phoneNumber;
-  final DateTime? createdAt;
-  final String? status;
+  final String name;
+  final String bio;
+  final String photoUrl;
+  final bool isOnline;
+  final DateTime lastSeen;
+  final List<String> groups;
+  final List<String> friends;
+  final List<String> blockedUsers;
 
   UserModel({
     required this.uid,
+    required this.phoneNumber,
     required this.name,
+    required this.bio,
     required this.photoUrl,
-    this.phoneNumber = '',
-    this.createdAt,
-    this.status,
+    required this.isOnline,
+    required this.lastSeen,
+    required this.groups,
+    required this.friends,
+    required this.blockedUsers,
   });
 
-  factory UserModel.fromMap(Map<String, dynamic> map) {
+  factory UserModel.fromMap(Map<String, dynamic> data) {
     return UserModel(
-      uid: map['uid'] ?? '',
-      name: map['name'] ?? '',
-      photoUrl: map['photoUrl'] ?? '',
-      phoneNumber: map['phoneNumber'] ?? '',
-      createdAt: map['createdAt'] != null
-          ? (map['createdAt'] is Timestamp
-              ? (map['createdAt'] as Timestamp).toDate()
-              : DateTime.tryParse(map['createdAt'].toString()))
-          : null,
-      status: map['status'],
+      uid: data['uid'] ?? '',
+      phoneNumber: data['phoneNumber'] ?? '',
+      name: data['name'] ?? '',
+      bio: data['bio'] ?? '',
+      photoUrl: data['photoUrl'] ?? '',
+      isOnline: data['isOnline'] ?? false,
+      lastSeen: data['lastSeen'] != null
+          ? (data['lastSeen'] as Timestamp).toDate()
+          : DateTime.now(),
+      groups: List<String>.from(data['groups'] ?? []),
+      friends: List<String>.from(data['friends'] ?? []),
+      blockedUsers: List<String>.from(data['blockedUsers'] ?? []),
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,
-      'name': name,
-      'photoUrl': photoUrl,
       'phoneNumber': phoneNumber,
-      'createdAt': createdAt,
-      'status': status,
+      'name': name,
+      'bio': bio,
+      'photoUrl': photoUrl,
+      'isOnline': isOnline,
+      'lastSeen': lastSeen,
+      'groups': groups,
+      'friends': friends,
+      'blockedUsers': blockedUsers,
     };
-  }
-
-  factory UserModel.fromFirebaseUser(User user) {
-    return UserModel(
-      uid: user.uid,
-      name: user.displayName ?? '',
-      photoUrl: user.photoURL ?? '',
-      phoneNumber: user.phoneNumber ?? '',
-      createdAt: DateTime.now(),
-      status: "Hey there! I am using Smart Chat."
-    );
   }
 }

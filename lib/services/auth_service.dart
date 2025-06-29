@@ -6,7 +6,8 @@ class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Phone Sign-In: returns User on success, null on failure
+  /// Signs in with a phone credential and ensures a user document exists in Firestore.
+  /// Returns the Firebase [User] on success, or null on failure.
   static Future<User?> signInWithPhoneCredential(PhoneAuthCredential credential) async {
     try {
       final userCredential = await _auth.signInWithCredential(credential);
@@ -15,33 +16,36 @@ class AuthService {
         final userDoc = _firestore.collection('users').doc(user.uid);
         final doc = await userDoc.get();
         if (!doc.exists) {
+          // Create a new user document with all required fields.
           final userModel = UserModel(
             uid: user.uid,
-            name: user.phoneNumber ?? '',
-            photoUrl: '',
             phoneNumber: user.phoneNumber ?? '',
-            createdAt: DateTime.now(),
+            name: '', // Set default or prompt for name later
+            bio: '',
+            photoUrl: '',
+            isOnline: true,
+            lastSeen: DateTime.now(),
+            groups: [],
+            friends: [],
+            blockedUsers: [],
           );
           await userDoc.set(userModel.toMap());
         }
       }
       return user;
     } on FirebaseAuthException catch (e) {
-      // You can log or handle specific FirebaseAuth errors here
       print('FirebaseAuthException: ${e.code} - ${e.message}');
       return null;
     } on FirebaseException catch (e) {
-      // Handle Firestore errors
       print('FirebaseException: ${e.code} - ${e.message}');
       return null;
     } catch (e) {
-      // Handle any other errors
       print('Unknown error in signInWithPhoneCredential: $e');
       return null;
     }
   }
 
-  /// Sign out from Firebase
+  /// Signs out the current user from Firebase Auth.
   static Future<void> signOut() async {
     try {
       await _auth.signOut();

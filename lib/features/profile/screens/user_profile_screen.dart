@@ -15,7 +15,7 @@ class UserProfileScreen extends StatefulWidget {
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
   File? _localImage;
-  
+
   bool get isSelf {
     final currentUser = FirebaseAuth.instance.currentUser;
     return currentUser != null && currentUser.uid == widget.user.uid;
@@ -24,7 +24,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         _localImage = File(picked.path);
       });
@@ -34,8 +34,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final String statusText = (widget.user.status ?? "Hey there! I am using Smart Chat.").toString();
-    final String username = widget.user.name; // Replace with actual username if available
+    final String aboutText = widget.user.bio.isNotEmpty
+        ? widget.user.bio
+        : "Hey there! I am using Smart Chat.";
+    final String username = widget.user.name;
 
     void showProfileImageDialog() {
       showDialog(
@@ -142,7 +144,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             "Edit",
                             style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
                           ),
-                          onPressed: () => _pickImage(),
+                          onPressed: _pickImage,
                         ),
                       ),
                     )
@@ -197,7 +199,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            statusText,
+                            aboutText,
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               color: colorScheme.onSurface.withAlpha((0.8 * 255).toInt()),

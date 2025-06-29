@@ -74,10 +74,15 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
         if (!doc.exists) {
           final userModel = UserModel(
             uid: user.uid,
-            name: user.phoneNumber ?? '',
-            photoUrl: '',
             phoneNumber: user.phoneNumber ?? '',
-            createdAt: DateTime.now(),
+            name: user.phoneNumber ?? '', // Default to phone, prompt for name later
+            bio: '',
+            photoUrl: '',
+            isOnline: true,
+            lastSeen: DateTime.now(),
+            groups: [],
+            friends: [],
+            blockedUsers: [],
           );
           await userDoc.set(userModel.toMap());
         }
@@ -88,6 +93,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
         setState(() => _error = "Verification failed. Try again.");
       }
     } catch (e) {
+      debugPrint('OTP verification error: $e');
       setState(() {
         _isLoading = false;
         _error = "Invalid code or verification failed.";

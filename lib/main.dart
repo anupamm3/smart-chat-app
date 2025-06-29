@@ -38,15 +38,13 @@ class SmartChatApp extends StatelessWidget {
       title: 'SmartChat',
       theme: ThemeData(
         useMaterial3: true,
-        brightness: Brightness.light,
         textTheme: GoogleFonts.poppinsTextTheme(),
-        colorSchemeSeed: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
-        brightness: Brightness.dark,
         textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
-        colorSchemeSeed: Colors.blue,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)
       ),
       themeMode: ThemeMode.system,
       home: StreamBuilder<User?>(
