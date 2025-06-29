@@ -12,6 +12,8 @@ import 'package:smart_chat_app/features/users/screens/new_chat_screen.dart';
 import 'package:smart_chat_app/firebase_options.dart';
 import 'package:smart_chat_app/models/contact_model.dart';
 import 'package:smart_chat_app/models/user_model.dart';
+import 'package:smart_chat_app/providers/theme_provider.dart';
+import 'package:smart_chat_app/settings/settings_screen.dart';
 import 'features/auth/screens/phone_onboarding_screen.dart';
 import 'features/auth/screens/otp_verification_screen.dart';
 import 'features/home/screens/home_screen.dart';
@@ -29,12 +31,15 @@ void main() async {
   );
 }
 
-class SmartChatApp extends StatelessWidget {
+class SmartChatApp extends ConsumerWidget {
   const SmartChatApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      themeMode: themeMode,
       title: 'SmartChat',
       theme: ThemeData(
         useMaterial3: true,
@@ -46,7 +51,6 @@ class SmartChatApp extends StatelessWidget {
         textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)
       ),
-      themeMode: ThemeMode.system,
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
@@ -87,7 +91,8 @@ class SmartChatApp extends StatelessWidget {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
           final contacts = args['contacts'] as List<ContactModel>;
           return GroupContactPickerScreen(contacts: contacts);
-        },      
+        },   
+        AppRoutes.settings: (context) => const SettingsScreen()   
       },
     );
   }

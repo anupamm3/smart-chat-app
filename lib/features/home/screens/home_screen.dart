@@ -116,22 +116,12 @@ class _ChatsTab extends StatelessWidget {
           ),
         ),
         actions: [
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, color: colorScheme.onSurface),
-            onSelected: (value) async {
-              if (value == 'logout') {
-                await FirebaseAuth.instance.signOut();
-                if (context.mounted) {
-                  Navigator.pushReplacementNamed(context, AppRoutes.onboarding);
-                }
-              }
+          IconButton(
+            icon: Icon(Icons.settings, color: colorScheme.onSurface),
+            tooltip: 'Settings',
+            onPressed: () {
+              Navigator.pushNamed(context, AppRoutes.settings);
             },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'logout',
-                child: Text('Logout', style: GoogleFonts.poppins()),
-              ),
-            ],
           ),
         ],
         bottom: PreferredSize(

@@ -1,6 +1,7 @@
 import 'dart:io' show File;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
@@ -93,13 +94,37 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ),
         iconTheme: IconThemeData(color: colorScheme.primary),
-      ),
-      body: SafeArea(
-        child: Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.settings, color: colorScheme.onSurface),
+            tooltip: 'Settings',
+            onPressed: () {
+              Navigator.pushNamed(context, AppRoutes.settings);
+            },
           ),
+        ],
+      ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: Theme.of(context).brightness == Brightness.dark
+                ? [
+                    colorScheme.surfaceContainerHighest,
+                    colorScheme.surface,
+                    colorScheme.primaryContainer
+                  ]
+                : [
+                    colorScheme.primaryContainer,
+                    colorScheme.surface,
+                    colorScheme.surfaceContainerHighest
+                  ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
           child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
