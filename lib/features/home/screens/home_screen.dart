@@ -16,6 +16,72 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIdx = 0;
+  int _previousIdx = 0;
+  UserModel? _cachedUserModel;
+
+  // Create the tabs list
+  List<Widget> _getTabs(User user) {
+    return [
+      ChatsTab(user: user),
+      const GroupsTab(),
+      _buildProfileTab(user),
+    ];
+  }
+
+  // Animate to selected tab
+  void _onTabSelected(int index) {
+    setState(() {
+      _previousIdx = _currentIdx;
+      _currentIdx = index;
+    });
+  }
+
+  // Custom slide transition
+  Widget _slideTransition(Widget child, Animation<double> animation) {
+    // Determine slide direction based on index change
+    final isMovingForward = _currentIdx > _previousIdx;
+    
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: isMovingForward 
+            ? const Offset(1.0, 0.0)  // Slide from right (moving forward)
+            : const Offset(-1.0, 0.0), // Slide from left (moving backward)
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: animation,
+        curve: Curves.fastOutSlowIn,
+      )),
+      child: child,
+    );
+  }
+
+  // Create profile widget once
+  Widget _buildProfileTab(User user) {
+    if (_cachedUserModel != null) {
+      return UserProfileScreen(user: _cachedUserModel!);
+    }
+    
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final userModel = UserModel.fromMap(snapshot.data!.data() as Map<String, dynamic>);
+        
+        // Cache the user model
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _cachedUserModel = userModel;
+            });
+          }
+        });
+        
+        return UserProfileScreen(user: userModel);
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,27 +108,23 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final List<Widget> tabs = [
-      ChatsTab(user: user),
-      GroupsTab(),
-      FutureBuilder<DocumentSnapshot>(
-        future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final userModel = UserModel.fromMap(snapshot.data!.data() as Map<String, dynamic>);
-          return UserProfileScreen(user: userModel);
-        },
-      ),
-    ];
+    final tabs = _getTabs(user);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      body: tabs[_currentIdx],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        switchInCurve: Curves.fastOutSlowIn,
+        switchOutCurve: Curves.fastOutSlowIn,
+        transitionBuilder: _slideTransition,
+        child: Container(
+          key: ValueKey<int>(_currentIdx),
+          child: tabs[_currentIdx],
+        ),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIdx,
-        onDestinationSelected: (idx) => setState(() => _currentIdx = idx),
+        onDestinationSelected: _onTabSelected,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.chat_bubble_outline),

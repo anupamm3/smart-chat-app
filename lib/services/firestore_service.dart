@@ -51,7 +51,7 @@ class FirestoreService {
         .orderBy('timestamp')
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => MessageModel.fromMap(doc.data() as Map<String, dynamic>))
+            .map((doc) => MessageModel.fromMap(doc.data()))
             .toList());
   }
 

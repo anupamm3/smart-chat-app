@@ -211,7 +211,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final chatController = ref.watch(chatControllerProvider(widget.receiver));
     final messagesAsync = ref.watch(chatMessagesProvider(widget.receiver));
 

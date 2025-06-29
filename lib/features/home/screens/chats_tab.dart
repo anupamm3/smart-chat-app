@@ -215,7 +215,7 @@ class _ChatsTabState extends State<ChatsTab> {
         final userData = userDoc.data() as Map<String, dynamic>;
         final otherUser = UserModel.fromMap(userData);
         userName = otherUser.name;
-        userPhone = otherUser.phoneNumber ?? '';
+        userPhone = otherUser.phoneNumber;
         userPic = otherUser.photoUrl;
       }
 
