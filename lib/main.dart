@@ -41,15 +41,11 @@ class SmartChatApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       themeMode: themeMode,
       title: 'SmartChat',
-      theme: ThemeData(
-        useMaterial3: true,
+      theme: ThemeData.light().copyWith(
         textTheme: GoogleFonts.poppinsTextTheme(),
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)
       ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
+      darkTheme: ThemeData.dark().copyWith(
         textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)
       ),
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),

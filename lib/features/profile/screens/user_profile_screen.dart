@@ -1,5 +1,6 @@
 import 'dart:io' show File;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/models/user_model.dart';
@@ -35,6 +36,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final String aboutText = widget.user.bio.isNotEmpty
         ? widget.user.bio
         : "Hey there! I am using Smart Chat.";
@@ -86,6 +88,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        systemOverlayStyle: isDark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
         title: Text(
           'Profile',
           style: GoogleFonts.poppins(
@@ -93,7 +98,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             color: colorScheme.onSurface,
           ),
         ),
-        iconTheme: IconThemeData(color: colorScheme.primary),
         actions: [
           IconButton(
             icon: Icon(Icons.settings, color: colorScheme.onSurface),

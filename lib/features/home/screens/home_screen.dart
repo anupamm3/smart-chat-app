@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
@@ -108,6 +110,9 @@ class _ChatsTab extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        systemOverlayStyle: isDark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         title: Text(
           'SmartChat',
           style: GoogleFonts.poppins(
@@ -169,7 +174,7 @@ class _ChatsTab extends StatelessWidget {
         height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: isDark
+            colors: Theme.of(context).brightness == Brightness.dark
                 ? [
                     colorScheme.surfaceContainerHighest,
                     colorScheme.surface,
@@ -222,7 +227,7 @@ class _ChatsTab extends StatelessWidget {
                     final lastMessage = data['lastMessage'] ?? '';
                     final lastMessageTime = (data['lastMessageTime'] as Timestamp?)?.toDate();
                     final unreadCount = data['unreadCounts']?[user.uid]?.toString() ?? '';
-
+    
                     return FutureBuilder<DocumentSnapshot>(
                       future: FirebaseFirestore.instance.collection('users').doc(otherUserId).get(),
                       builder: (context, userSnapshot) {
@@ -234,7 +239,7 @@ class _ChatsTab extends StatelessWidget {
                           otherUserName = otherUser.name;
                           otherUserPic = otherUser.photoUrl;
                         }
-
+    
                         return Card(
                           elevation: 2,
                           margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),

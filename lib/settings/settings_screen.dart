@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/constants.dart';
-import '../../../providers/theme_provider.dart';
+import 'package:smart_chat_app/providers/theme_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -26,7 +26,7 @@ class SettingsScreen extends ConsumerWidget {
               ],
               onChanged: (mode) {
                 if (mode != null) {
-                  ref.read(themeModeProvider.notifier).state = mode;
+                  ref.read(themeModeProvider.notifier).setThemeMode(mode);
                 }
               },
             ),
