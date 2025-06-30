@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:smart_chat_app/services/auth_service.dart';
+import 'package:smart_chat_app/services/auth_services.dart';
 
 class AuthState {
   final bool isLoading;

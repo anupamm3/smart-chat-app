@@ -8,9 +8,8 @@ It supports secure authentication, real-time 1-on-1 and group messaging, and sch
 ## 🌟 Features
 
 ### 🔐 Authentication
-- ✅ Google Sign-In with Firestore user creation
 - ✅ Phone number sign-in with OTP verification
-- ✅ Secure login flows — no unverified emails or numbers
+- ✅ Secure login flows — no unverified numbers
 
 ### 📇 Contact Integration
 - 🔄 Syncs device contacts and matches them with registered users
@@ -19,7 +18,7 @@ It supports secure authentication, real-time 1-on-1 and group messaging, and sch
 ### 🏠 Home Screen
 - 🎨 Soft gradient background (adapts to light/dark mode)
 - 🔍 Search bar to filter chats
-- 📁 Bottom navigation bar (Chats, Groups, Calls, Profile)
+- 📁 Bottom navigation bar (Chats, Groups, Profile)
 - 💬 "Start New Chat" FAB navigates to filtered contact list
 - 🧾 Scrollable recent chat list with previews and timestamps
 
