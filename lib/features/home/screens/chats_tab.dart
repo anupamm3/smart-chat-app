@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/models/user_model.dart';
+import 'package:smart_chat_app/services/contact_services.dart';
 import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
+import 'package:smart_chat_app/utils/contact_utils.dart'; // Add this import
 
 class ChatsTab extends StatefulWidget {
   final User user;
@@ -18,11 +20,45 @@ class ChatsTab extends StatefulWidget {
 class _ChatsTabState extends State<ChatsTab> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  final ContactService _contactService = ContactService();
+  
+  // Add these new variables for contact synchronization
+  Map<String, String> _contactMapping = {};
+  bool _contactsLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContacts();
+  }
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadContacts() async {
+    try {
+      _contactMapping = await _contactService.getContactMapping(widget.user.uid);
+      setState(() => _contactsLoaded = true);
+    } catch (e) {
+      print('Error loading contacts: $e');
+      setState(() => _contactsLoaded = true);
+    }
+  }
+
+  // Simplified methods using ContactService
+  String _getDisplayName(String phoneNumber, String registeredName) {
+    return _contactService.getDisplayName(phoneNumber, registeredName, _contactMapping);
+  }
+
+  bool _hasContactName(String phoneNumber) {
+    return _contactService.hasContactName(phoneNumber, _contactMapping);
+  }
+
+  String _getInitials(String displayName, String phoneNumber) {
+    return _contactService.getInitials(displayName, phoneNumber);
   }
 
   @override
@@ -112,122 +148,154 @@ class _ChatsTabState extends State<ChatsTab> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: StreamBuilder<QuerySnapshot>(
-            stream: chatQuery.snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return Center(
-                  child: Text(
-                    'No chats yet',
-                    style: GoogleFonts.poppins(
-                      color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
-                    ),
-                  ),
-                );
-              }
-      
-              return FutureBuilder<List<Map<String, dynamic>>>(
-                future: _buildChatListWithUserData(snapshot.data!.docs),
-                builder: (context, chatListSnapshot) {
-                  if (chatListSnapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-      
-                  if (!chatListSnapshot.hasData || chatListSnapshot.data!.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'No chats yet',
-                        style: GoogleFonts.poppins(
-                          color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+          child: !_contactsLoaded // Add loading state check
+              ? const Center(child: CircularProgressIndicator())
+              : StreamBuilder<QuerySnapshot>(
+                  stream: chatQuery.snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return Center(
+                        child: Text(
+                          'No chats yet',
+                          style: GoogleFonts.poppins(
+                            color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                          ),
                         ),
-                      ),
+                      );
+                    }
+          
+                    return FutureBuilder<List<Map<String, dynamic>>>(
+                      future: _buildChatListWithUserData(snapshot.data!.docs),
+                      builder: (context, chatListSnapshot) {
+                        if (chatListSnapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+          
+                        if (!chatListSnapshot.hasData || chatListSnapshot.data!.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'No chats yet',
+                              style: GoogleFonts.poppins(
+                                color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                              ),
+                            ),
+                          );
+                        }
+          
+                        // Updated filtering logic to include local phone numbers
+                        final filteredChats = chatListSnapshot.data!.where((chatData) {
+                          if (_searchQuery.isEmpty) return true;
+                          
+                          final userName = (chatData['userName'] as String).toLowerCase();
+                          final userPhone = (chatData['userPhone'] as String).toLowerCase();
+                          final localPhone = (chatData['localPhone'] as String).toLowerCase();
+                          
+                          return userName.contains(_searchQuery) || userPhone.contains(_searchQuery) || localPhone.contains(_searchQuery);
+                        }).toList();
+          
+                        if (filteredChats.isEmpty) {
+                          return Center(
+                            child: Text(
+                              _searchQuery.isEmpty ? 'No chats yet' : 'No chats found for "$_searchQuery"',
+                              style: GoogleFonts.poppins(
+                                color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                              ),
+                            ),
+                          );
+                        }
+          
+                        return ListView.separated(
+                          itemCount: filteredChats.length,
+                          separatorBuilder: (_, __) => Divider(
+                            color: colorScheme.outline.withAlpha((0.08 * 255).toInt()),
+                            height: 0,
+                          ),
+                          itemBuilder: (context, index) {
+                            final chatData = filteredChats[index];
+                            return _buildChatListTile(context, chatData, colorScheme, isDark);
+                          },
+                        );
+                      },
                     );
-                  }
-      
-                  // Filter chats based on search query
-                  final filteredChats = chatListSnapshot.data!.where((chatData) {
-                    if (_searchQuery.isEmpty) return true;
-                    
-                    final userName = (chatData['userName'] as String).toLowerCase();
-                    final userPhone = (chatData['userPhone'] as String).toLowerCase();
-                    
-                    return userName.contains(_searchQuery) || userPhone.contains(_searchQuery);
-                  }).toList();
-      
-                  if (filteredChats.isEmpty) {
-                    return Center(
-                      child: Text(
-                        _searchQuery.isEmpty ? 'No chats yet' : 'No chats found for "$_searchQuery"',
-                        style: GoogleFonts.poppins(
-                          color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
-                        ),
-                      ),
-                    );
-                  }
-      
-                  return ListView.separated(
-                    itemCount: filteredChats.length,
-                    separatorBuilder: (_, __) => Divider(
-                      color: colorScheme.outline.withAlpha((0.08 * 255).toInt()),
-                      height: 0,
-                    ),
-                    itemBuilder: (context, index) {
-                      final chatData = filteredChats[index];
-                      return _buildChatListTile(context, chatData, colorScheme, isDark);
-                    },
-                  );
-                },
-              );
-            },
-          ),
+                  },
+                ),
         ),
       ),
     );
   }
 
+  // Updated method with contact name synchronization
   Future<List<Map<String, dynamic>>> _buildChatListWithUserData(List<QueryDocumentSnapshot> chats) async {
     final List<Map<String, dynamic>> chatList = [];
 
     for (final chat in chats) {
-      final data = chat.data() as Map<String, dynamic>;
-      final participants = List<String>.from(data['participants'] ?? []);
-      final otherUserId = participants.firstWhere(
-        (id) => id != widget.user.uid,
-        orElse: () => '',
-      );
+      try {
+        final data = chat.data() as Map<String, dynamic>;
+        final participants = List<String>.from(data['participants'] ?? []);
+        final otherUserId = participants.firstWhere(
+          (id) => id != widget.user.uid,
+          orElse: () => '',
+        );
 
-      if (otherUserId.isEmpty) continue;
+        if (otherUserId.isEmpty) {
+          print('Skipping chat ${chat.id} - no other user found');
+          continue;
+        }
 
-      // Get other user's data
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(otherUserId)
-          .get();
+        // Get other user's data
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(otherUserId)
+            .get();
 
-      String userName = 'Unknown';
-      String userPhone = '';
-      String userPic = '';
+        String displayName = 'Unknown';
+        String userPhone = '';
+        String userPic = '';
+        String registeredName = '';
+        bool userExists = false;
 
-      if (userDoc.exists) {
-        final userData = userDoc.data() as Map<String, dynamic>;
-        final otherUser = UserModel.fromMap(userData);
-        userName = otherUser.name;
-        userPhone = otherUser.phoneNumber;
-        userPic = otherUser.photoUrl;
+        if (userDoc.exists && userDoc.data() != null) {
+          final userData = userDoc.data() as Map<String, dynamic>;
+          final otherUser = UserModel.fromMap(userData);
+          userExists = true;
+          
+          registeredName = otherUser.name;
+          userPhone = otherUser.phoneNumber; // Full international number
+          userPic = otherUser.photoUrl;
+
+          // Use contact name resolution
+          displayName = _getDisplayName(userPhone, registeredName);
+        } else {
+          // Handle testing numbers or users without Firestore documents
+          print('No user document for $otherUserId - treating as phone number');
+          userExists = false;
+          userPhone = otherUserId;
+          displayName = _getDisplayName(userPhone, '');
+        }
+
+        print('Adding chat ${chat.id} with user: $displayName ($otherUserId) [exists: $userExists]');
+
+        chatList.add({
+          'chatData': data,
+          'otherUserId': otherUserId,
+          'userName': displayName, // Now uses contact name if available
+          'userPhone': userPhone,
+          'localPhone': PhoneUtils.toLocalNumber(userPhone), // Add local phone for search
+          'userPic': userPic,
+          'registeredName': registeredName,
+          'isContactName': _hasContactName(userPhone),
+          'userExists': userExists,
+        });
+      } catch (e) {
+        print('Error processing chat ${chat.id}: $e');
+        continue;
       }
-
-      chatList.add({
-        'chatData': data,
-        'otherUserId': otherUserId,
-        'userName': userName,
-        'userPhone': userPhone,
-        'userPic': userPic,
-      });
     }
 
+    print('Total chats processed: ${chatList.length}');
     return chatList;
   }
 
@@ -236,11 +304,18 @@ class _ChatsTabState extends State<ChatsTab> {
     final otherUserId = chatData['otherUserId'] as String;
     final userName = chatData['userName'] as String;
     final userPhone = chatData['userPhone'] as String;
+    final localPhone = chatData['localPhone'] as String;
     final userPic = chatData['userPic'] as String;
+    final isContactName = chatData['isContactName'] as bool? ?? false;
+    final userExists = chatData['userExists'] as bool? ?? true;
 
-    final lastMessage = data['lastMessage'] ?? '';
+    final lastMessage = data['lastMessage']?.toString().trim() ?? '';
+    final displayMessage = lastMessage.isEmpty ? 'Tap to start conversation' : lastMessage;
+    
     final lastMessageTime = (data['lastMessageTime'] as Timestamp?)?.toDate();
     final unreadCount = data['unreadCounts']?[widget.user.uid]?.toString() ?? '';
+
+    final initials = _getInitials(userName, userPhone);
 
     return Card(
       elevation: 1,
@@ -248,40 +323,75 @@ class _ChatsTabState extends State<ChatsTab> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: colorScheme.surface.withAlpha(isDark ? (0.55 * 255).toInt() : (0.85 * 255).toInt()),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundImage: userPic.isNotEmpty
-              ? NetworkImage(userPic)
-              : null,
-          backgroundColor: colorScheme.primaryContainer,
-          child: userPic.isEmpty
-              ? Icon(Icons.person, color: colorScheme.primary)
-              : null,
+        leading: Stack(
+          children: [
+            CircleAvatar(
+              backgroundImage: userPic.isNotEmpty ? NetworkImage(userPic) : null,
+              backgroundColor: colorScheme.primaryContainer,
+              child: userPic.isEmpty
+                  ? Text(
+                      initials,
+                      style: GoogleFonts.poppins(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : null,
+            ),
+            // Show indicator for users without Firestore document
+            if (!userExists)
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1),
+                  ),
+                ),
+              ),
+          ],
         ),
-        title: Text(
-          userName,
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: colorScheme.onSurface,
-          ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                userName,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // Show warning icon for non-registered users
+            if (!userExists)
+              Tooltip(
+                message: 'User hasn\'t signed up yet',
+                child: Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: Colors.orange,
+                ),
+              ),
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (userPhone.isNotEmpty && _searchQuery.isNotEmpty && userPhone.contains(_searchQuery))
-              Text(
-                userPhone,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
             Text(
-              lastMessage,
+              displayMessage,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.poppins(
-                color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                color: lastMessage.isEmpty 
+                    ? colorScheme.onSurface.withAlpha((0.5 * 255).toInt())
+                    : colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                fontStyle: lastMessage.isEmpty ? FontStyle.italic : FontStyle.normal,
               ),
             ),
           ],
@@ -317,14 +427,37 @@ class _ChatsTabState extends State<ChatsTab> {
           ],
         ),
         onTap: () async {
-          final userDoc = await FirebaseFirestore.instance.collection('users').doc(otherUserId).get();
-          if (!context.mounted) return;
-          if (userDoc.exists) {
-            final otherUser = UserModel.fromMap(userDoc.data() as Map<String, dynamic>);
+          if (userExists) {
+            // User has Firestore document, navigate normally
+            final userDoc = await FirebaseFirestore.instance.collection('users').doc(otherUserId).get();
+            if (!context.mounted) return;
+            if (userDoc.exists) {
+              final otherUser = UserModel.fromMap(userDoc.data() as Map<String, dynamic>);
+              Navigator.pushNamed(
+                context,
+                AppRoutes.chat,
+                arguments: otherUser,
+              );
+            }
+          } else {
+            // User doesn't have Firestore document, create temporary user model
+            if (!context.mounted) return;
+            final tempUser = UserModel(
+              uid: otherUserId,
+              phoneNumber: userPhone,
+              name: userName,
+              bio: '',
+              photoUrl: '',
+              isOnline: false,
+              lastSeen: DateTime.now(),
+              groups: [],
+              friends: [],
+              blockedUsers: [],
+            );
             Navigator.pushNamed(
               context,
               AppRoutes.chat,
-              arguments: otherUser,
+              arguments: tempUser,
             );
           }
         },
