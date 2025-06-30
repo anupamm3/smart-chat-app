@@ -88,6 +88,7 @@ class _GroupContactPickerScreenState extends State<GroupContactPickerScreen> {
               foregroundColor: colorScheme.onPrimary,
               elevation: 4,
               onPressed: () async {
+                final navigator = Navigator.of(context);
                 final selectedContacts = widget.contacts
                     .where((c) => _selectedContactIds.contains(c.id))
                     .toList();
@@ -97,7 +98,9 @@ class _GroupContactPickerScreenState extends State<GroupContactPickerScreen> {
                     builder: (_) => GroupCreateScreen(selectedContacts: selectedContacts),
                   ),
                 );
-                if (result == true) Navigator.pop(context, true);
+                if (result == true && mounted) {
+                  navigator.pop(true);
+                }
               },
               child: const Icon(Icons.arrow_forward),
             ),
@@ -115,8 +118,6 @@ class GroupCreateScreen extends StatefulWidget {
 
 class _GroupCreateScreenState extends State<GroupCreateScreen> {
   final TextEditingController _groupNameController = TextEditingController();
-  // TODO: Add image picker logic if needed
-
   bool _creating = false;
 
   @override
@@ -144,9 +145,9 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
       memberUids.add(currentUser.uid);
 
       // Create group in Firestore
-      final groupDoc = await FirebaseFirestore.instance.collection('groups').add({
+      await FirebaseFirestore.instance.collection('groups').add({
         'name': groupName,
-        'photoUrl': null, // Add photo URL if you implement image picker
+        'photoUrl': null,
         'members': memberUids,
         'createdBy': currentUser.uid,
         'createdAt': FieldValue.serverTimestamp(),
@@ -154,15 +155,17 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
         'lastMessageTime': null,
       });
 
-      // Optionally: You can also create a welcome message in groups/{groupId}/messages
-
-      setState(() => _creating = false);
-      Navigator.pop(context, true); // Pops GroupCreateScreen
+      if (mounted) {
+        setState(() => _creating = false);
+        Navigator.pop(context, true); // Pops GroupCreateScreen
+      }
     } catch (e) {
-      setState(() => _creating = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to create group: $e', style: GoogleFonts.poppins())),
-      );
+      if (mounted) {
+        setState(() => _creating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create group: $e', style: GoogleFonts.poppins())),
+        );
+      }
     }
   }
 
@@ -178,7 +181,6 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            // TODO: Add image picker here if needed
             TextField(
               controller: _groupNameController,
               style: GoogleFonts.poppins(),

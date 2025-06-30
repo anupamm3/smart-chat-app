@@ -104,6 +104,8 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
         onPressed: () async {
+          final navigator = Navigator.of(context);
+          final scaffoldMessenger = ScaffoldMessenger.of(context);
           final matchedContacts = await fetchMatchedContacts(currentUserId);
           if (!mounted) return;
           final contacts = matchedContacts.map((mc) {
@@ -113,14 +115,13 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
               displayName: mc.contactName ?? mc.user.name,
             );
           }).toList();
-          final result = await Navigator.pushNamed(
-            context,
+          final result = await navigator.pushNamed(
             AppRoutes.groupContactPicker,
             arguments: {'contacts': contacts},
           );
           if (!mounted) return;
           if (result == true) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            scaffoldMessenger.showSnackBar(
               SnackBar(content: Text('Group created!', style: GoogleFonts.poppins())),
             );
           }

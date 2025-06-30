@@ -22,7 +22,6 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
-    print('Setting theme mode: $mode');
     state = mode;
     final prefs = await SharedPreferences.getInstance();
     if (mode == ThemeMode.light) {

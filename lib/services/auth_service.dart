@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_chat_app/models/user_model.dart';
+import 'dart:developer' as developer;
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -34,13 +35,25 @@ class AuthService {
       }
       return user;
     } on FirebaseAuthException catch (e) {
-      print('FirebaseAuthException: ${e.code} - ${e.message}');
+      developer.log(
+        'FirebaseAuthException during phone sign in',
+        name: 'AuthService',
+        error: '${e.code} - ${e.message}',
+      );
       return null;
     } on FirebaseException catch (e) {
-      print('FirebaseException: ${e.code} - ${e.message}');
+      developer.log(
+        'FirebaseException during phone sign in',
+        name: 'AuthService',
+        error: '${e.code} - ${e.message}',
+      );
       return null;
     } catch (e) {
-      print('Unknown error in signInWithPhoneCredential: $e');
+      developer.log(
+        'Unknown error during phone sign in',
+        name: 'AuthService',
+        error: e.toString(),
+      );
       return null;
     }
   }
@@ -50,7 +63,11 @@ class AuthService {
     try {
       await _auth.signOut();
     } catch (e) {
-      print('Error during sign out: $e');
+      developer.log(
+        'Error during sign out',
+        name: 'AuthService',
+        error: e.toString(),
+      );
     }
   }
 }

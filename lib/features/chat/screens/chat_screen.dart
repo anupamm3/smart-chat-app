@@ -103,6 +103,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Future<void> _onScheduleMessagePressed() async {
     final colorScheme = Theme.of(context).colorScheme;
     final chatController = ref.read(chatControllerProvider(widget.receiver));
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     // 1. Pick date
     DateTime? pickedDate = await showDatePicker(
@@ -117,7 +118,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: child!,
       ),
     );
-    if (pickedDate == null) return;
+    if (pickedDate == null || !mounted) return;
 
     // 2. Pick time
     TimeOfDay? pickedTime = await showTimePicker(
@@ -130,7 +131,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: child!,
       ),
     );
-    if (pickedTime == null) return;
+    if (pickedTime == null || !mounted) return;
 
     // Combine date and time
     final scheduledDateTime = DateTime(
@@ -194,12 +195,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
 
     // 4. On confirm, schedule the message
+    if (!mounted) return;
     if (confirmed == true && messageController.text.trim().isNotEmpty) {
       await chatController.scheduleMessage(
         messageController.text.trim(),
         scheduledDateTime,
       );
-      ScaffoldMessenger.of(context).showSnackBar(
+      scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Message scheduled!', style: GoogleFonts.poppins()),
           backgroundColor: colorScheme.primary,

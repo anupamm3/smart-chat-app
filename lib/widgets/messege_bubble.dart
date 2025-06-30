@@ -27,8 +27,8 @@ class MessageBubble extends StatelessWidget {
     if (isMe) {
       bubbleGradient = LinearGradient(
         colors: [
-          colorScheme.primary.withOpacity(0.95),
-          colorScheme.primary.withOpacity(0.75),
+          colorScheme.primary.withAlpha((0.95 * 255).toInt()),
+          colorScheme.primary.withAlpha((0.75 * 255).toInt()),
         ],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
@@ -36,8 +36,8 @@ class MessageBubble extends StatelessWidget {
     } else {
       bubbleGradient = LinearGradient(
         colors: [
-          colorScheme.surfaceVariant.withOpacity(0.95),
-          colorScheme.surface.withOpacity(0.85),
+          colorScheme.surfaceContainerHighest.withAlpha((0.95 * 255).toInt()),
+          colorScheme.surface.withAlpha((0.85 * 255).toInt()),
         ],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
