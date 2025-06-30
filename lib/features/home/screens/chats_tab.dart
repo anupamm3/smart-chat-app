@@ -43,7 +43,6 @@ class _ChatsTabState extends State<ChatsTab> {
       _contactMapping = await _contactService.getContactMapping(widget.user.uid);
       setState(() => _contactsLoaded = true);
     } catch (e) {
-      print('Error loading contacts: $e');
       setState(() => _contactsLoaded = true);
     }
   }
@@ -241,7 +240,6 @@ class _ChatsTabState extends State<ChatsTab> {
         );
 
         if (otherUserId.isEmpty) {
-          print('Skipping chat ${chat.id} - no other user found');
           continue;
         }
 
@@ -263,39 +261,33 @@ class _ChatsTabState extends State<ChatsTab> {
           userExists = true;
           
           registeredName = otherUser.name;
-          userPhone = otherUser.phoneNumber; // Full international number
+          userPhone = otherUser.phoneNumber;
           userPic = otherUser.photoUrl;
 
           // Use contact name resolution
           displayName = _getDisplayName(userPhone, registeredName);
         } else {
           // Handle testing numbers or users without Firestore documents
-          print('No user document for $otherUserId - treating as phone number');
           userExists = false;
           userPhone = otherUserId;
           displayName = _getDisplayName(userPhone, '');
         }
 
-        print('Adding chat ${chat.id} with user: $displayName ($otherUserId) [exists: $userExists]');
-
         chatList.add({
           'chatData': data,
           'otherUserId': otherUserId,
-          'userName': displayName, // Now uses contact name if available
+          'userName': displayName,
           'userPhone': userPhone,
-          'localPhone': PhoneUtils.toLocalNumber(userPhone), // Add local phone for search
+          'localPhone': PhoneUtils.toLocalNumber(userPhone),
           'userPic': userPic,
           'registeredName': registeredName,
           'isContactName': _hasContactName(userPhone),
           'userExists': userExists,
         });
       } catch (e) {
-        print('Error processing chat ${chat.id}: $e');
         continue;
       }
     }
-
-    print('Total chats processed: ${chatList.length}');
     return chatList;
   }
 

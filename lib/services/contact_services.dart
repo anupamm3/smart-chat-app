@@ -31,9 +31,7 @@ class ContactService {
       };
       _contactsLoaded = true;
       _lastUserId = currentUserId;
-      print('ContactService: Loaded ${_contactNameByLocalPhone.length} contact mappings');
     } catch (e) {
-      print('ContactService: Error loading contacts: $e');
       _contactsLoaded = true; // Set to true to avoid infinite loading
     }
   }
