@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/features/chat/controller/chat_controller.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/models/message_model.dart';
+import 'package:smart_chat_app/services/contact_services.dart';
 import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 import 'package:smart_chat_app/widgets/messege_bubble.dart';
 
@@ -32,8 +34,10 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  String? _localContactName;
   Timer? _scheduledMsgTimer;
+  final ContactService _contactService = ContactService();
+  Map<String, String> _contactMapping = {};
+  bool _contactsLoaded = false;
 
   @override
   void initState() {
@@ -41,7 +45,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     // Mark messages as seen when chat is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(chatControllerProvider(widget.receiver)).markMessagesAsSeen();
-      _fetchLocalContactName();
+      _loadContacts();
 
       // Start periodic check for scheduled messages
       _scheduledMsgTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -56,34 +60,33 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchLocalContactName() async {
-    // Check permission status first
-    var status = await Permission.contacts.status;
-    if (!status.isGranted) {
-      status = await Permission.contacts.request();
-      if (!status.isGranted) {
-        // Optionally show a dialog and open app settings if denied forever
-        if (status.isPermanentlyDenied) {
-          await openAppSettings();
-        }
-        return;
+  Future<void> _loadContacts() async {
+    try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId != null) {
+        _contactMapping = await _contactService.getContactMapping(currentUserId);
+        setState(() => _contactsLoaded = true);
       }
+    } catch (e) {
+      setState(() => _contactsLoaded = true);
     }
+  }
 
-    // Now safe to fetch contacts
-    final contacts = await FlutterContacts.getContacts(withProperties: true);
-    final phone = widget.receiver.phoneNumber.replaceAll(RegExp(r'\D'), '');
-    for (final contact in contacts) {
-      for (final item in contact.phones) {
-        final contactPhone = item.number.replaceAll(RegExp(r'\D'), '');
-        if (contactPhone.endsWith(phone)) {
-          setState(() {
-            _localContactName = contact.displayName;
-          });
-          return;
-        }
-      }
-    }
+  String get _displayName {
+    if (!_contactsLoaded) return 'Loading...';
+    return _contactService.getDisplayName(
+      widget.receiver.phoneNumber,
+      widget.receiver.name,
+      _contactMapping,
+    );
+  }
+
+  bool get _hasContactName {
+    return _contactService.hasContactName(widget.receiver.phoneNumber, _contactMapping);
+  }
+
+  String get _initials {
+    return _contactService.getInitials(_displayName, widget.receiver.phoneNumber);
   }
 
   void _sendMessage(ChatController chatController) async {
@@ -236,18 +239,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     : null,
                 backgroundColor: colorScheme.primaryContainer,
                 child: widget.receiver.photoUrl.isEmpty
-                    ? Icon(Icons.person, color: colorScheme.primary)
+                    ? Text(
+                        _initials,
+                        style: GoogleFonts.poppins(
+                          color: colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
                     : null,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                _localContactName?.isNotEmpty == true
-                    ? _localContactName!
-                    : (widget.receiver.name.isNotEmpty
-                        ? widget.receiver.name
-                        : widget.receiver.phoneNumber),
+                _displayName,
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w600,
                   color: colorScheme.onSurface,

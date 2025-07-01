@@ -13,7 +13,7 @@ import 'package:smart_chat_app/firebase_options.dart';
 import 'package:smart_chat_app/models/contact_model.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/providers/theme_provider.dart';
-import 'package:smart_chat_app/settings/settings_screen.dart';
+import 'package:smart_chat_app/features/settings/settings_screen.dart';
 import 'features/auth/screens/phone_onboarding_screen.dart';
 import 'features/auth/screens/otp_verification_screen.dart';
 import 'features/home/screens/home_screen.dart';
