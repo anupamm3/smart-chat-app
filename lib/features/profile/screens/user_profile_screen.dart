@@ -155,6 +155,33 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
+  Future<void> _removeProfilePhoto() async {
+    try {
+      final userId = widget.user.uid;
+      // Remove from Firebase Storage
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_pictures')
+          .child('$userId.jpg');
+      await storageRef.delete().catchError((_) {});
+
+      // Remove from Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .update({'photoUrl': ''});
+
+      if (!mounted) return;
+      setState(() {
+        _localImage = null;
+      });
+      showSuccess(context, 'Profile photo removed!');
+    } catch (e) {
+      if (!mounted) return;
+      showError(context, 'Failed to remove profile photo: $e');
+    }
+  }
+
   Future<void> _updateName() async {
     final newName = _nameController.text.trim();
     
@@ -397,23 +424,74 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     // Profile Image with tap
-                    GestureDetector(
-                      onTap: showProfileImageDialog,
-                      child: Hero(
-                        tag: 'profile_image_${widget.user.uid}',
-                        child: CircleAvatar(
-                          radius: 60,
-                          backgroundImage: _localImage != null
-                              ? FileImage(_localImage!)
-                              : (widget.user.photoUrl.isNotEmpty
-                                  ? NetworkImage(widget.user.photoUrl)
-                                  : null) as ImageProvider?,
-                          backgroundColor: colorScheme.primaryContainer,
-                          child: (_localImage == null && widget.user.photoUrl.isEmpty)
-                              ? Icon(Icons.person, size: 60, color: colorScheme.primary)
-                              : null,
+                    Stack(
+                      alignment: Alignment.topRight,
+                      children: [
+                        GestureDetector(
+                          onTap: showProfileImageDialog,
+                          child: Hero(
+                            tag: 'profile_image_${widget.user.uid}',
+                            child: CircleAvatar(
+                              radius: 75,
+                              backgroundImage: _localImage != null
+                                  ? FileImage(_localImage!)
+                                  : (widget.user.photoUrl.isNotEmpty
+                                      ? NetworkImage(widget.user.photoUrl)
+                                      : null) as ImageProvider?,
+                              backgroundColor: colorScheme.primaryContainer,
+                              child: (_localImage == null && widget.user.photoUrl.isEmpty)
+                                  ? Icon(Icons.person, size: 60, color: colorScheme.primary)
+                                  : null,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (isSelf && (widget.user.photoUrl.isNotEmpty || _localImage != null))
+                          Positioned(
+                            top: -2,
+                            right: -2,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: colorScheme.primary, // Match your theme
+                                foregroundColor: colorScheme.onPrimary,
+                                shape: const CircleBorder(),
+                                padding: const EdgeInsets.all(4),
+                                minimumSize: const Size(32, 32),
+                                elevation: 1,
+                              ),
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Remove Profile Photo'),
+                                    content: const Text('Are you sure you want to remove your profile photo?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: colorScheme.error,
+                                          foregroundColor: colorScheme.onError,
+                                        ),
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                        child: const Text('Remove'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  await _removeProfilePhoto();
+                                }
+                              },
+                              child: Icon(
+                                Icons.close,
+                                size: 20,
+                                color: colorScheme.onPrimary,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     // Edit button (only for self)
                     if (isSelf)
