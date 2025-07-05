@@ -1,3 +1,4 @@
+import 'package:animate_do/animate_do.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -73,31 +74,35 @@ class _PhoneOnboardingScreenState extends ConsumerState<PhoneOnboardingScreen> {
               children: [
                 // App name/logo
                 const SizedBox(height: 24),
-                SizedBox(
-                  height: 200,
-                  width: 200,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? Colors.white.withAlpha((255 * 0.75).toInt()) // Light overlay in dark mode
-                          : Colors.black.withAlpha((255 * 0.04).toInt()), // Subtle shadow in light mode
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Lottie.asset(
-                        'assets/lottie/chat_icon.json',
+                BounceInDown(
+                  child: SizedBox(
+                    height: 200,
+                    width: 200,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withAlpha((255 * 0.75).toInt()) // Light overlay in dark mode
+                            : Colors.black.withAlpha((255 * 0.04).toInt()), // Subtle shadow in light mode
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Lottie.asset(
+                          'assets/lottie/chat_icon.json',
+                        ),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  "SmartChat",
-                  style: GoogleFonts.poppins(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface,
+                BounceInDown(
+                  child: Text(
+                    "SmartChat",
+                    style: GoogleFonts.poppins(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 8),
