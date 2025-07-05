@@ -1,10 +1,10 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
 import 'package:smart_chat_app/constants.dart';
+import 'package:smart_chat_app/features/auth/controller/auth_controller.dart';
 import 'package:smart_chat_app/features/groups/screens/group_chat_screen.dart';
 import 'package:smart_chat_app/features/groups/screens/group_contact_picker_screen.dart';
 import 'package:smart_chat_app/features/home/screens/groups_tab.dart';
@@ -44,6 +44,8 @@ class SmartChatApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    final authAsync = ref.watch(authStateChangesProvider);
+    
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       themeMode: themeMode,
@@ -127,24 +129,17 @@ class SmartChatApp extends ConsumerWidget {
           ),
         ),
       ),
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const BrandedSplashScreen();
-          }
-          if (snapshot.hasError) {
-            return Scaffold(
-              body: Center(
-                child: Text('Auth error: ${snapshot.error}'),
-              ),
-            );
-          }
-          if (snapshot.hasData && snapshot.data != null) {
+      home: authAsync.when(
+        data: (user) {
+          if (user != null) {
             return const HomeScreen();
           }
           return const PhoneOnboardingScreen();
         },
+        loading: () => const BrandedSplashScreen(),
+        error: (err, stack) => Scaffold(
+          body: Center(child: Text('Auth error: $err')),
+        ),
       ),
       routes: {
         AppRoutes.onboarding: (context) => const PhoneOnboardingScreen(),
