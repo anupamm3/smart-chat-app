@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/features/home/screens/chats_tab.dart';
 import 'package:smart_chat_app/features/home/screens/groups_tab.dart';
-import 'package:smart_chat_app/models/user_model.dart';
-import 'package:smart_chat_app/features/profile/screens/user_profile_screen.dart';
+import 'package:smart_chat_app/features/home/screens/profile_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,14 +15,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIdx = 0;
   int _previousIdx = 0;
-  UserModel? _cachedUserModel;
 
   // Create the tabs list
   List<Widget> _getTabs(User user) {
     return [
       ChatsTab(user: user),
       const GroupsTab(),
-      _buildProfileTab(user),
+      ProfileTab(user: user)
     ];
   }
 
@@ -52,34 +49,6 @@ class _HomeScreenState extends State<HomeScreen> {
         curve: Curves.fastOutSlowIn,
       )),
       child: child,
-    );
-  }
-
-  // Create profile widget once
-  Widget _buildProfileTab(User user) {
-    if (_cachedUserModel != null) {
-      return UserProfileScreen(user: _cachedUserModel!);
-    }
-    
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData || !snapshot.data!.exists) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final userModel = UserModel.fromMap(snapshot.data!.data() as Map<String, dynamic>);
-        
-        // Cache the user model
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            setState(() {
-              _cachedUserModel = userModel;
-            });
-          }
-        });
-        
-        return UserProfileScreen(user: userModel);
-      },
     );
   }
 

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
@@ -37,4 +38,20 @@ final userProvider = FutureProvider.family<UserModel?, String>((ref, uid) async 
 final userStreamProvider = StreamProvider.family<UserModel?, String>((ref, uid) {
   final repo = ref.read(userRepositoryProvider);
   return repo.watchUserById(uid);
+});
+
+/// Provider for the current user's UserModel (fetches once).
+final userModelProvider = FutureProvider<UserModel?>((ref) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return null;
+  final repo = ref.read(userRepositoryProvider);
+  return repo.getUserById(user.uid);
+});
+
+/// Provider for the current user's UserModel (live updates).
+final userModelStreamProvider = StreamProvider<UserModel?>((ref) {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return const Stream.empty();
+  final repo = ref.read(userRepositoryProvider);
+  return repo.watchUserById(user.uid);
 });

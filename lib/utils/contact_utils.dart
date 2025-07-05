@@ -6,7 +6,7 @@ import 'package:smart_chat_app/models/user_model.dart';
 class MatchedContact {
   final UserModel user;
   final String? contactName;
-  final String localPhoneNumber; // Add local phone for quick access
+  final String localPhoneNumber;
   
   MatchedContact({
     required this.user, 
@@ -15,7 +15,6 @@ class MatchedContact {
   });
 }
 
-// Phone utility functions integrated into contact_utils
 class PhoneUtils {
   // Common country codes to strip
   static const List<String> commonCountryCodes = [
@@ -60,7 +59,7 @@ class PhoneUtils {
       return withoutPlus;
     }
     
-    // If no country code detected, return as is (already local)
+    // If no country code detected, return as it is (already local)
     return cleaned;
   }
 
@@ -68,7 +67,7 @@ class PhoneUtils {
   static String toInternationalNumber(String localNumber, [String countryCode = '+91']) {
     if (localNumber.isEmpty) return localNumber;
     
-    String cleaned = toLocalNumber(localNumber); // Clean it first
+    String cleaned = toLocalNumber(localNumber);
     
     // If already has country code, return as is
     if (cleaned.startsWith('+')) {
@@ -122,12 +121,10 @@ class PhoneUtils {
   }
 }
 
-// Updated normalize function to use PhoneUtils
 String normalizePhone(String phone) {
   return PhoneUtils.toInternationalNumber(phone);
 }
 
-// Updated fetchMatchedContacts with improved phone matching
 Future<List<MatchedContact>> fetchMatchedContacts(String? currentUserId) async {
   if (currentUserId == null) return [];
 

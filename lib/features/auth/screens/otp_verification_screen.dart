@@ -17,8 +17,7 @@ class OTPVerificationScreen extends ConsumerStatefulWidget {
 }
 
 class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
-  final List<TextEditingController> _controllers =
-      List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isLoading = false;
   String? _error;
@@ -48,8 +47,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
     });
   }
 
-  String get _otpCode =>
-      _controllers.map((c) => c.text.trim()).join();
+  String get _otpCode => _controllers.map((c) => c.text.trim()).join();
 
   Future<void> _verifyOtp() async {
     HapticFeedback.lightImpact();
