@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lottie/lottie.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/features/groups/screens/group_chat_screen.dart';
 import 'package:smart_chat_app/features/groups/screens/group_contact_picker_screen.dart';
@@ -21,14 +22,20 @@ import 'features/chat/screens/chat_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(
-    const ProviderScope(
-      child: SmartChatApp(),
-    ),
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    runApp(const ProviderScope(child: SmartChatApp()));
+  } catch (e) {
+    runApp(MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Text('Failed to initialize Firebase: $e'),
+        ),
+      ),
+    ));
+  }
 }
 
 class SmartChatApp extends ConsumerWidget {
@@ -124,8 +131,13 @@ class SmartChatApp extends ConsumerWidget {
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
+            return const BrandedSplashScreen();
+          }
+          if (snapshot.hasError) {
+            return Scaffold(
+              body: Center(
+                child: Text('Auth error: ${snapshot.error}'),
+              ),
             );
           }
           if (snapshot.hasData && snapshot.data != null) {
@@ -163,6 +175,60 @@ class SmartChatApp extends ConsumerWidget {
         },   
         AppRoutes.settings: (context) => const SettingsScreen()   
       },
+    );
+  }
+}
+
+class BrandedSplashScreen extends StatelessWidget {
+  const BrandedSplashScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              height: 200,
+              width: 200,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withAlpha((255 * 0.75).toInt()) // Light overlay in dark mode
+                      : Colors.black.withAlpha((255 * 0.04).toInt()), // Subtle shadow in light mode
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Lottie.asset(
+                    'assets/lottie/chat_icon.json',
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'SmartChat',
+              style: TextStyle(
+                color: colorScheme.onSurface,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 32),
+            // Animated loader (can be replaced with Lottie or custom animation)
+            CircularProgressIndicator(
+              color: colorScheme.onSurface,
+              strokeWidth: 3,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -73,14 +73,22 @@ class _PhoneOnboardingScreenState extends ConsumerState<PhoneOnboardingScreen> {
               children: [
                 // App name/logo
                 const SizedBox(height: 24),
-                // Icon(Icons.chat_bubble_rounded, size: 64, color: colorScheme.primary),
                 SizedBox(
                   height: 200,
                   width: 200,
-                  child: Lottie.asset(
-                    'assets/lottie/chat_icon.json',
-                    // fit: BoxFit.cover,
-                    // repeat: false,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withAlpha((255 * 0.75).toInt()) // Light overlay in dark mode
+                          : Colors.black.withAlpha((255 * 0.04).toInt()), // Subtle shadow in light mode
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Lottie.asset(
+                        'assets/lottie/chat_icon.json',
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
