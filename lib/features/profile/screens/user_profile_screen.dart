@@ -507,7 +507,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               ),
                               elevation: 1,
                             ),
-                            icon: const Icon(Icons.edit),
                             label: Text(
                               "Edit Photo",
                               style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
@@ -519,7 +518,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     else
                       const SizedBox(height: 36),
             
-                    // **Name Section with inline editing**
+                    // Name Section with inline editing
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -529,7 +528,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Title row with edit icon
                               Row(
                                 children: [
                                   Text(
@@ -681,7 +679,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                     const SizedBox(height: 28),
             
-                    // **About Section with inline editing**
+                    // About Section with inline editing
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -691,7 +689,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Title row with edit icon
                               Row(
                                 children: [
                                   Text(
@@ -840,7 +837,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                     const SizedBox(height: 28),
             
-                    // **Phone Section (read-only)**
+                    // Phone Section (read-only)
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -869,37 +866,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         ),
                       ],
                     ),
-            
-                    // **Action Button for non-self profiles**
-                    if (!isSelf) ...[
-                      const SizedBox(height: 36),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          elevation: 2,
-                        ),
-                        icon: const Icon(Icons.chat_bubble_outline_rounded),
-                        label: Text(
-                          "Start Chat",
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                        ),
-                        onPressed: () {
-                          Navigator.pushNamed(
-                            context,
-                            AppRoutes.chat,
-                            arguments: widget.user,
-                          );
-                        },
-                      ),
-                    ],
                   ],
                 ),
               ),
