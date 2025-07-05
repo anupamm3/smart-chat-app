@@ -1,6 +1,8 @@
 import 'dart:io' show File;
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/models/user_model.dart';
@@ -9,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_chat_app/services/contact_services.dart';
 import 'package:smart_chat_app/utils/contact_utils.dart';
+import 'package:smart_chat_app/utils/snackbar_utils.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -72,14 +75,83 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       print('Error loading contacts: $e');
     }
   }
+  
+  Future<void> _uploadProfileImage(File imageFile) async {
+    setState(() {
+      _localImage = imageFile;
+    });
+
+    try {
+      final userId = widget.user.uid;
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_pictures')
+          .child('$userId.jpg');
+
+      // Upload file
+      final uploadTask = await storageRef.putFile(imageFile);
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      // Update Firestore user document
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .update({'photoUrl': downloadUrl});
+
+      if (!mounted) return;
+
+      setState(() {});
+      showSuccess(context, 'Profile picture updated!');
+    } catch (e) {
+      showError(context, 'Failed to upload profile picture: $e');
+    }
+  }
+
+  Future<File?> compressImage(File file) async {
+    final targetPath = file.path.replaceFirst('.jpg', '_compressed.jpg');
+    final xfile  = await FlutterImageCompress.compressAndGetFile(
+      file.absolute.path,
+      targetPath,
+      quality: 80, 
+      minWidth: 600,
+      minHeight: 600,
+    );
+    return xfile != null ? File(xfile.path) : null;
+  }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked != null && mounted) {
-      setState(() {
-        _localImage = File(picked.path);
-      });
+      File tempImage = File(picked.path);
+
+      // Compress the image
+      final compressed = await compressImage(tempImage);
+      if (compressed != null) tempImage = compressed;
+
+      if(!mounted) return;
+
+      // Show confirm dialog
+      final shouldUpload = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Update Profile Picture'),
+          content: Image.file(tempImage, height: 180),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Confirm'),
+            ),
+          ],
+        ),
+      );
+      if (shouldUpload == true) {
+        await _uploadProfileImage(tempImage);
+      }
     }
   }
 
@@ -88,17 +160,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     
     // Validation
     if (newName.isEmpty) {
-      _showError('Name cannot be empty');
+      showError(context, 'Name cannot be empty');
       return;
     }
     
     if (newName.length < 2) {
-      _showError('Name must be at least 2 characters');
+      showError(context, 'Name must be at least 2 characters');
       return;
     }
     
     if (newName.length > 50) {
-      _showError('Name must be less than 50 characters');
+      showError(context, 'Name must be less than 50 characters');
       return;
     }
     
@@ -125,13 +197,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _isEditingName = false;
         _isUpdatingName = false;
       });
-      
-      _showSuccess('Name updated successfully');
+      if (!mounted) return;
+      showSuccess(context, 'Name updated successfully');
     } catch (e) {
       setState(() {
         _isUpdatingName = false;
       });
-      _showError('Failed to update name: $e');
+      showError(context, 'Failed to update name: $e');
     }
   }
 
@@ -140,7 +212,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     
     // Validation
     if (newAbout.length > 200) {
-      _showError('About must be less than 200 characters');
+      showError(context, 'About must be less than 200 characters');
       return;
     }
     
@@ -167,34 +239,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _isEditingAbout = false;
         _isUpdatingAbout = false;
       });
-      
-      _showSuccess('About updated successfully');
+      if (!mounted) return;
+      showSuccess(context, 'About updated successfully');
     } catch (e) {
       setState(() {
         _isUpdatingAbout = false;
       });
-      _showError('Failed to update about: $e');
+      showError(context, 'Failed to update about: $e');
     }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: GoogleFonts.poppins()),
-        backgroundColor: Colors.red[600],
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: GoogleFonts.poppins()),
-        backgroundColor: Colors.green[600],
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   void _cancelNameEdit() {
@@ -237,7 +289,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       }
     } catch (e) {
       print('Error refreshing profile: $e');
-      _showError('Failed to refresh profile');
+      if (!mounted) return;
+      showError(context, 'Failed to refresh profile');
     }
   }
 
