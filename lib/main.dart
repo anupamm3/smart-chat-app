@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +16,7 @@ import 'package:smart_chat_app/models/contact_model.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/providers/theme_provider.dart';
 import 'package:smart_chat_app/features/settings/settings_screen.dart';
+import 'package:smart_chat_app/providers/user_provider.dart';
 import 'features/auth/screens/phone_onboarding_screen.dart';
 import 'features/auth/screens/otp_verification_screen.dart';
 import 'features/home/screens/home_screen.dart';
@@ -45,6 +47,15 @@ class SmartChatApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
     final authAsync = ref.watch(authStateChangesProvider);
+
+    // Listen for auth changes and invalidate chat providers
+    ref.listen<AsyncValue<User?>>(
+      authStateChangesProvider,
+      (previous, next) {
+        ref.invalidate(chatControllerProvider);
+        ref.invalidate(chatMessagesProvider);
+      },
+    );
     
     return MaterialApp(
       debugShowCheckedModeBanner: false,

@@ -90,6 +90,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void _sendMessage(ChatController chatController) async {
     await chatController.sendMessage(_controller.text);
     _controller.clear();
+    ref.invalidate(chatMessagesProvider(widget.receiver));
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -202,6 +203,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         messageController.text.trim(),
         scheduledDateTime,
       );
+      ref.invalidate(chatMessagesProvider(widget.receiver));
       scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Message scheduled!', style: GoogleFonts.poppins()),
