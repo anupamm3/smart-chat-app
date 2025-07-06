@@ -1,1 +1,40 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"smart-chat-app-c0389","appId":"1:118630022353:android:96bc3b07715a3862fad9f0","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"smart-chat-app-c0389","configurations":{"android":"1:118630022353:android:96bc3b07715a3862fad9f0","ios":"1:118630022353:ios:f5448c2247109253fad9f0","macos":"1:118630022353:ios:f5448c2247109253fad9f0","web":"1:118630022353:web:513ab9170bf69557fad9f0"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "smart-chat-app-c0389",
+          "appId": "1:118630022353:android:96bc3b07715a3862fad9f0",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "smart-chat-app-c0389",
+          "configurations": {
+            "android": "1:118630022353:android:96bc3b07715a3862fad9f0",
+            "ios": "1:118630022353:ios:f5448c2247109253fad9f0",
+            "macos": "1:118630022353:ios:f5448c2247109253fad9f0",
+            "web": "1:118630022353:web:513ab9170bf69557fad9f0"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    }
+  ]
+}
