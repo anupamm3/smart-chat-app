@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "118630022353-g536hfq8k29jhvno5vumjl5b8e3bqhnn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.anupamarya.smartchatapp",
+            "certificate_hash": "dff0187b6cb1b81503cb02e95ef939a7fe076d36"
+          }
+        },
+        {
           "client_id": "118630022353-o24thmhegg4rbnfk4o5q9kliuc5ok6f4.apps.googleusercontent.com",
           "client_type": 3
         }
