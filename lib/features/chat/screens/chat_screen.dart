@@ -71,15 +71,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _contactMapping,
     );
   }
-
-  bool get _hasContactName {
-    return _contactService.hasContactName(widget.receiver.phoneNumber, _contactMapping);
-  }
-
-  String get _initials {
-    return _contactService.getInitials(_displayName, widget.receiver.phoneNumber);
-  }
-
+  
   bool _isPhoneLike(String s) {
     final cleaned = s.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
     return cleaned.isNotEmpty && RegExp(r'^\d+$').hasMatch(cleaned);

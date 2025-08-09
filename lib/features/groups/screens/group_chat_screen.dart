@@ -365,10 +365,6 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
                       final msg = docs[index].data() as Map<String, dynamic>;
-                      final isScheduledPending = (msg['type'] == 'scheduled' && msg['sent'] == false);
-                      final displayText = isScheduledPending
-                          ? '[Scheduled ${ (msg['scheduledTime'] is Timestamp) ? (msg['scheduledTime'] as Timestamp).toDate().toString().substring(0,16) : '' }] ${msg['text']}'
-                          : (msg['text'] ?? '');
                       final isMe = msg['senderId'] == FirebaseAuth.instance.currentUser?.uid;
 
                       // Parse timestamp

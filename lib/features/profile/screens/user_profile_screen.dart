@@ -89,7 +89,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           .child('$userId.jpg');
 
       // Upload file
-      final uploadTask = await storageRef.putFile(imageFile);
       final downloadUrl = await storageRef.getDownloadURL();
 
       // Update Firestore user document
@@ -331,11 +330,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
     // Get display name using ContactService for non-self profiles
     String displayName = _currentName;
-    bool hasContactName = false;
+    // bool hasContactName = false;
     
-    if (!isSelf) {
-      hasContactName = _contactService.hasContactName(widget.user.phoneNumber, _contactMapping);
-    }
+    // if (!isSelf) {
+    //   hasContactName = _contactService.hasContactName(widget.user.phoneNumber, _contactMapping);
+    // }
 
     void showProfileImageDialog() {
       showDialog(

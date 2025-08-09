@@ -21,49 +21,53 @@ class MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    // Gradient backgrounds for modern look
+    // Updated: Remove gradient for outgoing (isMe) to improve tick readability.
     Gradient? bubbleGradient;
     Color? bubbleColor;
+
     if (isMe) {
-      bubbleGradient = LinearGradient(
-        colors: [
-          colorScheme.primary.withAlpha((0.95 * 255).toInt()),
-          colorScheme.primary.withAlpha((0.75 * 255).toInt()),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
+      bubbleColor = colorScheme.primary; // solid color
     } else {
-      bubbleGradient = LinearGradient(
-        colors: [
-          colorScheme.surfaceContainerHighest.withAlpha((0.95 * 255).toInt()),
-          colorScheme.surface.withAlpha((0.85 * 255).toInt()),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
+      bubbleColor = colorScheme.surfaceContainerHighest; // solid color
+      // bubbleGradient = LinearGradient(
+      //   colors: [
+      //     colorScheme.surfaceContainerHighest.withAlpha((0.95 * 255).toInt()),
+      //     colorScheme.surface.withAlpha((0.85 * 255).toInt()),
+      //   ],
+      //   begin: Alignment.topLeft,
+      //   end: Alignment.bottomRight,
+      // );
     }
 
-    Color tickColor = Colors.grey;
-    IconData tickIcon = Icons.check;
-    Widget tickWidget = const SizedBox.shrink();
+    // Text & time colors
+    final textColor = isMe
+        ? colorScheme.onPrimary
+        : colorScheme.onSurface.withAlpha((0.9 * 255).toInt());
+    final timeColor = isMe
+        ? colorScheme.onPrimary.withAlpha((0.7 * 255).toInt())
+        : colorScheme.onSurface.withAlpha((0.7 * 255).toInt());
+
+    // Status / ticks
+    Color tickColor = timeColor;
+    IconData? tickIcon;
 
     if (isMe && status != null) {
       switch (status!) {
         case MessageStatus.sent:
           tickIcon = Icons.check;
-          tickColor = Colors.grey;
+          tickColor = timeColor;
           break;
         case MessageStatus.delivered:
           tickIcon = Icons.done_all;
-          tickColor = Colors.grey;
+          tickColor = timeColor;
           break;
         case MessageStatus.seen:
           tickIcon = Icons.done_all;
-          tickColor = Colors.blue;
+          tickColor = isMe
+              ? const Color.fromARGB(255, 36, 154, 205)
+              : colorScheme.primary;
           break;
       }
-      tickWidget = Icon(tickIcon, size: 16, color: tickColor);
     }
 
     return Align(
@@ -84,8 +88,8 @@ class MessageBubble extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: colorScheme.outline.withAlpha((0.08 * 255).toInt()),
-                blurRadius: 6,
+                color: colorScheme.outline.withAlpha((0.06 * 255).toInt()),
+                blurRadius: 4,
                 offset: const Offset(0, 2),
               ),
             ],
@@ -99,15 +103,13 @@ class MessageBubble extends StatelessWidget {
                 child: Text(
                   text,
                   style: GoogleFonts.poppins(
-                    color: isMe
-                        ? colorScheme.onPrimary
-                        : colorScheme.onSurface.withAlpha((0.9 * 255).toInt()),
+                    color: textColor,
                     fontSize: 16,
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              // Time and tick
+              const SizedBox(width: 6),
+              // Time + tick
               if (timestamp != null)
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -116,14 +118,12 @@ class MessageBubble extends StatelessWidget {
                       '${timestamp!.hour.toString().padLeft(2, '0')}:${timestamp!.minute.toString().padLeft(2, '0')}',
                       style: GoogleFonts.poppins(
                         fontSize: 11,
-                        color: isMe
-                            ? colorScheme.onPrimary.withAlpha((0.8 * 255).toInt())
-                            : colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
+                        color: timeColor,
                       ),
                     ),
-                    if (isMe && status != null) ...[
-                      const SizedBox(width: 2),
-                      tickWidget,
+                    if (isMe && tickIcon != null) ...[
+                      const SizedBox(width: 3),
+                      Icon(tickIcon, size: 15, color: tickColor),
                     ],
                   ],
                 ),
