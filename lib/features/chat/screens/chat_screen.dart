@@ -80,6 +80,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     return _contactService.getInitials(_displayName, widget.receiver.phoneNumber);
   }
 
+  bool _isPhoneLike(String s) {
+    final cleaned = s.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
+    return cleaned.isNotEmpty && RegExp(r'^\d+$').hasMatch(cleaned);
+  }
+
   void _sendMessage(ChatController chatController) async {
     await chatController.sendMessage(_controller.text);
     _controller.clear();
@@ -232,13 +237,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     : null,
                 backgroundColor: colorScheme.primaryContainer,
                 child: widget.receiver.photoUrl.isEmpty
-                    ? Text(
-                        _initials,
-                        style: GoogleFonts.poppins(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      )
+                    ? (!_isPhoneLike(_displayName) &&
+                            _displayName.trim().isNotEmpty &&
+                            RegExp(r'[A-Za-z]').hasMatch(_displayName.trim()[0]))
+                        ? Text(
+                            _displayName.trim()[0].toUpperCase(),
+                            style: GoogleFonts.poppins(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : Icon(Icons.person, color: colorScheme.primary)
                     : null,
               ),
             ),

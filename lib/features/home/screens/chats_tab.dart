@@ -55,9 +55,10 @@ class _ChatsTabState extends State<ChatsTab> {
   bool _hasContactName(String phoneNumber) {
     return _contactService.hasContactName(phoneNumber, _contactMapping);
   }
-
-  String _getInitials(String displayName, String phoneNumber) {
-    return _contactService.getInitials(displayName, phoneNumber);
+  
+  bool _isPhoneLike(String s) {
+    final cleaned = s.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
+    return cleaned.isNotEmpty && RegExp(r'^\d+$').hasMatch(cleaned);
   }
 
   @override
@@ -79,7 +80,7 @@ class _ChatsTabState extends State<ChatsTab> {
             ? SystemUiOverlayStyle.light
             : SystemUiOverlayStyle.dark,
         title: Text(
-          'SmartChat',
+          'Home',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.bold,
             color: colorScheme.onSurface,
@@ -226,6 +227,56 @@ class _ChatsTabState extends State<ChatsTab> {
     );
   }
 
+  Widget _buildAvatar({
+    required String userPic,
+    required String displayName,
+    required ColorScheme colorScheme,
+    required bool userExists,
+  }) {
+    final isPhone = _isPhoneLike(displayName);
+    final hasPhoto = userPic.isNotEmpty;
+    final firstChar = (!isPhone && displayName.trim().isNotEmpty)
+        ? displayName.trim()[0].toUpperCase()
+        : '';
+
+    final showLetter = !hasPhoto && !isPhone && RegExp(r'[A-Z]').hasMatch(firstChar);
+
+    return Stack(
+      children: [
+        CircleAvatar(
+          backgroundColor: colorScheme.primaryContainer,
+          foregroundImage: hasPhoto ? NetworkImage(userPic) : null,
+          child: hasPhoto
+              ? null
+              : showLetter
+                  ? Text(
+                      firstChar,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: colorScheme.primary,
+                      ),
+                    )
+                  : Icon(Icons.person, color: colorScheme.primary, size: 26),
+        ),
+        if (!userExists)
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   // Updated method with contact name synchronization
   Future<List<Map<String, dynamic>>> _buildChatListWithUserData(List<QueryDocumentSnapshot> chats) async {
     final List<Map<String, dynamic>> chatList = [];
@@ -296,9 +347,7 @@ class _ChatsTabState extends State<ChatsTab> {
     final otherUserId = chatData['otherUserId'] as String;
     final userName = chatData['userName'] as String;
     final userPhone = chatData['userPhone'] as String;
-    final localPhone = chatData['localPhone'] as String;
     final userPic = chatData['userPic'] as String;
-    final isContactName = chatData['isContactName'] as bool? ?? false;
     final userExists = chatData['userExists'] as bool? ?? true;
 
     final lastMessage = data['lastMessage']?.toString().trim() ?? '';
@@ -307,45 +356,17 @@ class _ChatsTabState extends State<ChatsTab> {
     final lastMessageTime = (data['lastMessageTime'] as Timestamp?)?.toDate();
     final unreadCount = data['unreadCounts']?[widget.user.uid]?.toString() ?? '';
 
-    final initials = _getInitials(userName, userPhone);
-
     return Card(
       elevation: 1,
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: colorScheme.surface.withAlpha(isDark ? (0.55 * 255).toInt() : (0.85 * 255).toInt()),
       child: ListTile(
-        leading: Stack(
-          children: [
-            CircleAvatar(
-              backgroundImage: userPic.isNotEmpty ? NetworkImage(userPic) : null,
-              backgroundColor: colorScheme.primaryContainer,
-              child: userPic.isEmpty
-                  ? Text(
-                      initials,
-                      style: GoogleFonts.poppins(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    )
-                  : null,
-            ),
-            // Show indicator for users without Firestore document
-            if (!userExists)
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: Colors.orange,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1),
-                  ),
-                ),
-              ),
-          ],
+        leading: _buildAvatar(
+          userPic: userPic,
+          displayName: userName,
+          colorScheme: colorScheme,
+          userExists: userExists,
         ),
         title: Row(
           children: [
