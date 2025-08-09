@@ -3,7 +3,7 @@ import 'package:smart_chat_app/widgets/messege_bubble.dart';
 
 class MessageModel {
   final String senderId;
-  final String receiverId;
+  final String? receiverId;
   final String text;
   final DateTime? timestamp;
   final MessageStatus status;
@@ -25,7 +25,7 @@ class MessageModel {
   factory MessageModel.fromMap(Map<String, dynamic> map) {
     return MessageModel(
       senderId: map['senderId'] ?? '',
-      receiverId: map['receiverId'] ?? '',
+      receiverId: map['receiverId'],
       text: map['text'] ?? '',
       timestamp: map['timestamp'] != null
           ? (map['timestamp'] as Timestamp).toDate()

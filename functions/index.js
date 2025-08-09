@@ -12,31 +12,81 @@ const {onSchedule} = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 admin.initializeApp();
 
-exports.processScheduledMessages =
-  onSchedule("every 1 minutes", async (event) => {
-    const now = admin.firestore.Timestamp.now();
-    const chatsSnapshot = await admin.firestore().collection("chats").get();
+exports.processScheduledMessages = onSchedule({schedule: "every 1 minutes", timeZone: "Etc/UTC"}, async () => {
+  const now = admin.firestore.Timestamp.now();
 
-    for (const chatDoc of chatsSnapshot.docs) {
-      const chatId = chatDoc.id;
-      const messagesRef = admin.firestore()
-          .collection("chats")
-          .doc(chatId)
-          .collection("messages");
+  // Query all pending scheduled messages across chats & groups
+  const qSnap = await admin.firestore()
+    .collectionGroup("messages")
+    .where("type", "==", "scheduled")
+    .where("sent", "==", false)
+    .where("scheduledTime", "<=", now)
+    .get();
 
-      const scheduledMessagesSnapshot = await messagesRef
-          .where("type", "==", "scheduled")
-          .where("sent", "==", false)
-          .where("scheduledTime", "<=", now)
-          .get();
+  if (qSnap.empty) return null;
+  const batch = admin.firestore().batch();
 
-      for (const msgDoc of scheduledMessagesSnapshot.docs) {
-        await msgDoc.ref.update({
-          sent: true,
-          timestamp: now,
-          status: "sent",
-        });
-      }
+  for (const doc of qSnap.docs) {
+    const parent = doc.ref.parent; // messages collection
+    const containerRef = parent.parent; // chats/{id} OR groups/{id}
+    if (!containerRef) continue;
+
+    const data = doc.data();
+    const text = data.text || "";
+    const senderId = data.senderId;
+    const receiverId = data.receiverId || null;
+
+    // Update the message
+    batch.update(doc.ref, {
+      sent: true,
+      timestamp: now,
+      status: "sent",
+    });
+
+    // Update last message fields
+    batch.set(
+      containerRef,
+      {
+        lastMessage: text,
+        lastMessageTime: now,
+      },
+      {merge: true},
+    );
+
+    // Optional: unread counts logic
+    // If 1:1 chat
+    if (containerRef.path.startsWith("chats/") && receiverId) {
+      batch.set(
+        containerRef,
+        {
+          unreadCounts: {
+            [receiverId]: admin.firestore.FieldValue.increment(1),
+          },
+        },
+        {merge: true},
+      );
     }
-    return null;
-  });
+
+    // If group: increment unreadCounts for all members except sender
+    if (containerRef.path.startsWith("groups/")) {
+      const groupDoc = await containerRef.get();
+      const members = groupDoc.exists ? groupDoc.data().members || [] : [];
+      members
+        .filter((m) => m !== senderId)
+        .forEach((m) => {
+          batch.set(
+            containerRef,
+            {
+              unreadCounts: {
+                [m]: admin.firestore.FieldValue.increment(1),
+              },
+            },
+            {merge: true},
+          );
+        });
+    }
+  }
+
+  await batch.commit();
+  return null;
+});

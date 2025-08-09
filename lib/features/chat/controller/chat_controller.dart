@@ -24,13 +24,16 @@ class ChatController {
         .collection('messages')
         .orderBy('timestamp')
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => MessageModel.fromMap(doc.data()))
-            .where((msg) =>
-                msg.type == null ||
-                msg.type == 'text' ||
-                (msg.type == 'scheduled' && msg.sent == true))
-            .toList());
+        .map((snapshot) => snapshot.docs.map((doc) {
+              final m = MessageModel.fromMap(doc.data());
+              return m;
+            }).where((m) {
+              if (m.type == 'scheduled' && !m.sent) {
+                // show only to sender before it fires
+                return m.senderId == currentUser.uid;
+              }
+              return true;
+            }).toList());
   }
 
   Future<void> sendMessage(String text) async {
@@ -95,7 +98,7 @@ class ChatController {
       'text': text.trim(),
       'senderId': currentUser.uid,
       'receiverId': receiver.uid,
-      'timestamp': FieldValue.serverTimestamp(),
+      'timestamp': null,
       'scheduledTime': Timestamp.fromDate(scheduledTime),
       'sent': false,
       'type': 'scheduled',
@@ -108,7 +111,6 @@ class ChatController {
         .collection('messages')
         .add(message);
 
-    // Optionally update chat doc for last scheduled message
     await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
       'lastMessage': '[Scheduled]',
       'lastMessageTime': FieldValue.serverTimestamp(),
@@ -133,7 +135,7 @@ class ChatController {
         'sent': true,
         'timestamp': FieldValue.serverTimestamp(),
         'status': 'sent',
-        'type': 'scheduled', // keep type for filtering
+        'type': 'scheduled',
       });
     }
   }

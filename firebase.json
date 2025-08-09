@@ -11,12 +11,12 @@
       "dart": {
         "lib/firebase_options.dart": {
           "projectId": "smart-chat-app-c0389",
-          "configurations": {
-            "android": "1:118630022353:android:96bc3b07715a3862fad9f0",
-            "ios": "1:118630022353:ios:f5448c2247109253fad9f0",
-            "macos": "1:118630022353:ios:f5448c2247109253fad9f0",
-            "web": "1:118630022353:web:513ab9170bf69557fad9f0"
-          }
+            "configurations": {
+              "android": "1:118630022353:android:96bc3b07715a3862fad9f0",
+              "ios": "1:118630022353:ios:f5448c2247109253fad9f0",
+              "macos": "1:118630022353:ios:f5448c2247109253fad9f0",
+              "web": "1:118630022353:web:513ab9170bf69557fad9f0"
+            }
         }
       }
     }
@@ -25,16 +25,23 @@
     {
       "source": "functions",
       "codebase": "default",
+      "runtime": "nodejs20",
       "ignore": [
         "node_modules",
         ".git",
         "firebase-debug.log",
         "firebase-debug.*.log",
         "*.local"
-      ],
-      "predeploy": [
-        "npm --prefix \"$RESOURCE_DIR\" run lint"
       ]
     }
-  ]
+  ],
+  "firestore": {
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "functions": { "port": 5001 },
+    "firestore": { "port": 8080 },
+    "ui": { "enabled": true },
+    "singleProjectMode": true
+  }
 }

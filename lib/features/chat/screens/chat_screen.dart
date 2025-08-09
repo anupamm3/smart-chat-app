@@ -32,7 +32,6 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  Timer? _scheduledMsgTimer;
   final ContactService _contactService = ContactService();
   Map<String, String> _contactMapping = {};
   bool _contactsLoaded = false;
@@ -44,17 +43,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(chatControllerProvider(widget.receiver)).markMessagesAsSeen();
       _loadContacts();
-
-      // Start periodic check for scheduled messages
-      _scheduledMsgTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-        ref.read(chatControllerProvider(widget.receiver)).processScheduledMessages();
-      });
     });
   }
 
   @override
   void dispose() {
-    _scheduledMsgTimer?.cancel();
     super.dispose();
   }
 

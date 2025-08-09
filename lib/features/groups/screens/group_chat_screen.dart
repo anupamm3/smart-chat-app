@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:smart_chat_app/features/groups/controller/group_chat_controller.dart';
 import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 import 'package:smart_chat_app/widgets/messege_bubble.dart';
 
@@ -27,7 +26,6 @@ class GroupChatRoomScreen extends StatefulWidget {
 class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  Timer? _scheduledMsgTimer;
   String? _creatorId;
   List<String> _members = [];
   bool _loadingGroup = true;
@@ -36,11 +34,6 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
   void initState() {
     super.initState();
     _fetchGroupInfo();
-    deliverDueScheduledMessages(widget.groupId);
-    _scheduledMsgTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) => deliverDueScheduledMessages(widget.groupId),
-    );
   }
 
   Future<void> _fetchGroupInfo() async {
@@ -174,16 +167,27 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
     );
 
     if (scheduledText.isNotEmpty && scheduledDateTime != null) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
       await FirebaseFirestore.instance
           .collection('groups')
           .doc(widget.groupId)
-          .collection('scheduledMessages')
+          .collection('messages')
           .add({
-        'senderId': user.uid,
         'text': scheduledText,
-        'scheduledAt': Timestamp.fromDate(scheduledDateTime!),
-        'createdAt': FieldValue.serverTimestamp(),
+        'senderId': user.uid,
+        'receiverId': null,
+        'type': 'scheduled',
+        'scheduledTime': Timestamp.fromDate(scheduledDateTime!),
+        'timestamp': null,
+        'sent': false,
+        'status': 'pending',
       });
+
+      await FirebaseFirestore.instance.collection('groups').doc(widget.groupId).set({
+        'lastMessage': '[Scheduled]',
+        'lastMessageTime': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -233,7 +237,6 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
 
   @override
   void dispose() {
-    _scheduledMsgTimer?.cancel();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -338,7 +341,8 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
                     .collection('groups')
                     .doc(widget.groupId)
                     .collection('messages')
-                    .orderBy('sentAt')
+                    .orderBy('scheduledTime', descending: false)
+                    .orderBy('timestamp', descending: false)
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -361,6 +365,10 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
                     itemCount: docs.length,
                     itemBuilder: (context, index) {
                       final msg = docs[index].data() as Map<String, dynamic>;
+                      final isScheduledPending = (msg['type'] == 'scheduled' && msg['sent'] == false);
+                      final displayText = isScheduledPending
+                          ? '[Scheduled ${ (msg['scheduledTime'] is Timestamp) ? (msg['scheduledTime'] as Timestamp).toDate().toString().substring(0,16) : '' }] ${msg['text']}'
+                          : (msg['text'] ?? '');
                       final isMe = msg['senderId'] == FirebaseAuth.instance.currentUser?.uid;
 
                       // Parse timestamp
@@ -383,7 +391,7 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
                         text: msg['text'] ?? '',
                         isMe: isMe,
                         timestamp: timestamp,
-                        status: status,
+                        status: isMe ? status : null,
                       );
                     },
                   );
