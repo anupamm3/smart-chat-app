@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
-import 'package:smart_chat_app/widgets/messege_bubble.dart';
+import 'package:smart_chat_app/widgets/message_bubble.dart';
 
 class GroupChatRoomScreen extends StatefulWidget {
   final String groupId;
