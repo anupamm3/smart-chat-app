@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:smart_chat_app/widgets/messege_bubble.dart';
+import 'package:smart_chat_app/widgets/message_bubble.dart';
 
 class MessageModel {
   final String senderId;
@@ -10,6 +10,13 @@ class MessageModel {
   final String? type;
   final bool sent;
   final DateTime? scheduledTime;
+  
+  // New media fields
+  final String? mediaUrl;
+  final String? mediaType;
+  final String? fileName;
+  final int? fileSize;
+  final String? mediaThumbnail;
 
   MessageModel({
     required this.senderId,
@@ -20,6 +27,11 @@ class MessageModel {
     this.type,
     this.sent = true,
     this.scheduledTime,
+    this.mediaUrl,
+    this.mediaType,
+    this.fileName,
+    this.fileSize,
+    this.mediaThumbnail,
   });
 
   factory MessageModel.fromMap(Map<String, dynamic> map) {
@@ -41,6 +53,11 @@ class MessageModel {
       scheduledTime: map['scheduledTime'] != null
           ? (map['scheduledTime'] as Timestamp).toDate()
           : null,
+      mediaUrl: map['mediaUrl'] as String?,
+      mediaType: map['mediaType'] as String?,
+      fileName: map['fileName'] as String?,
+      fileSize: map['fileSize'] as int?,
+      mediaThumbnail: map['mediaThumbnail'] as String?,
     );
   }
 
@@ -54,6 +71,11 @@ class MessageModel {
       'type': type ?? 'text',
       'sent': sent,
       'scheduledTime': scheduledTime != null ? Timestamp.fromDate(scheduledTime!) : null,
+      'mediaUrl': mediaUrl,
+      'mediaType': mediaType,
+      'fileName': fileName,
+      'fileSize': fileSize,
+      'mediaThumbnail': mediaThumbnail,
     };
   }
 }

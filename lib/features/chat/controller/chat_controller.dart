@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smart_chat_app/models/message_model.dart';
 import 'package:smart_chat_app/models/user_model.dart';
+import 'package:smart_chat_app/services/media_cache_service.dart';
 
 class ChatController {
   final UserModel receiver;
@@ -24,16 +25,34 @@ class ChatController {
         .collection('messages')
         .orderBy('timestamp')
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final m = MessageModel.fromMap(doc.data());
-              return m;
-            }).where((m) {
-              if (m.type == 'scheduled' && !m.sent) {
-                // show only to sender before it fires
-                return m.senderId == currentUser.uid;
-              }
-              return true;
-            }).toList());
+        .map((snapshot) {
+          final messages = snapshot.docs.map((doc) {
+            final m = MessageModel.fromMap(doc.data());
+            return m;
+          }).where((m) {
+            if (m.type == 'scheduled' && !m.sent) {
+              return m.senderId == currentUser.uid;
+            }
+            return true;
+          }).toList();
+
+          // Preload media for recent messages
+          _preloadRecentMedia(messages);
+          
+          return messages;
+        });
+  }
+
+  void _preloadRecentMedia(List<MessageModel> messages) {
+    final recentMessages = messages.take(20).toList(); // Last 20 messages
+    final mediaUrls = recentMessages
+        .where((m) => m.mediaUrl != null && !m.mediaUrl!.startsWith('local://'))
+        .map((m) => m.mediaUrl!)
+        .toList();
+    
+    if (mediaUrls.isNotEmpty) {
+      MediaCacheService().preloadMedia(mediaUrls);
+    }
   }
 
   Future<void> sendMessage(String text) async {
@@ -138,5 +157,69 @@ class ChatController {
         'type': 'scheduled',
       });
     }
+  }
+
+  // NEW MEDIA MESSAGE METHODS
+
+  Future<void> sendMediaMessage(String mediaUrl, String mediaType, String? fileName, int? fileSize, String? thumbnailUrl, String? caption) async {
+    final message = {
+      'text': caption?.trim() ?? '',
+      'senderId': currentUser.uid,
+      'receiverId': receiver.uid,
+      'timestamp': FieldValue.serverTimestamp(),
+      'status': 'sent',
+      'mediaUrl': mediaUrl,
+      'mediaType': mediaType,
+      'fileName': fileName,
+      'fileSize': fileSize,
+      'mediaThumbnail': thumbnailUrl,
+    };
+
+    await FirebaseFirestore.instance
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .add(message);
+
+    // Set appropriate last message based on media type
+    String lastMessage;
+    switch (mediaType) {
+      case 'image':
+        lastMessage = '[Image]';
+        break;
+      case 'video':
+        lastMessage = '[Video]';
+        break;
+      case 'audio':
+        lastMessage = '[Audio]';
+        break;
+      case 'document':
+        lastMessage = '[Document]';
+        break;
+      default:
+        lastMessage = '[Media]';
+    }
+
+    await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+      'lastMessage': lastMessage,
+      'lastMessageTime': FieldValue.serverTimestamp(),
+      'participants': [currentUser.uid, receiver.uid],
+      'unreadCounts': {
+        receiver.uid: FieldValue.increment(1),
+        currentUser.uid: 0,
+      },
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> sendImageMessage(String imageUrl, String? caption) async {
+    await sendMediaMessage(imageUrl, 'image', null, null, null, caption);
+  }
+
+  Future<void> sendVideoMessage(String videoUrl, String? thumbnailUrl, String? caption) async {
+    await sendMediaMessage(videoUrl, 'video', null, null, thumbnailUrl, caption);
+  }
+
+  Future<void> sendDocumentMessage(String documentUrl, String fileName, int fileSize, String? caption) async {
+    await sendMediaMessage(documentUrl, 'document', fileName, fileSize, null, caption);
   }
 }

@@ -1,16 +1,22 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/features/chat/controller/chat_controller.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/models/message_model.dart';
 import 'package:smart_chat_app/services/contact_services.dart';
+import 'package:smart_chat_app/services/media_cache_service.dart';
+import 'package:smart_chat_app/services/media_optimization_service.dart';
 import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
-import 'package:smart_chat_app/widgets/messege_bubble.dart';
+import 'package:smart_chat_app/widgets/message_bubble.dart';
 
 final chatControllerProvider = Provider.family<ChatController, UserModel>((ref, receiver) {
   return ChatController(receiver: receiver);
@@ -35,6 +41,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final ContactService _contactService = ContactService();
   Map<String, String> _contactMapping = {};
   bool _contactsLoaded = false;
+  bool _isUploading = false;
+  double _uploadProgress = 0.0;
 
   @override
   void initState() {
@@ -203,6 +211,309 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  // NEW MEDIA FUNCTIONALITY
+  void _showMediaPicker() {
+    final colorScheme = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: colorScheme.outline.withAlpha((0.3 * 255).toInt()),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Send Media',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _MediaPickerOption(
+                    icon: Icons.camera_alt,
+                    label: 'Camera',
+                    color: colorScheme.primary,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickImage(ImageSource.camera);
+                    },
+                  ),
+                  _MediaPickerOption(
+                    icon: Icons.photo_library,
+                    label: 'Gallery',
+                    color: Colors.green,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickImage(ImageSource.gallery);
+                    },
+                  ),
+                  _MediaPickerOption(
+                    icon: Icons.description,
+                    label: 'Document',
+                    color: Colors.orange,
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickDocument();
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        await _showImagePreview(File(image.path));
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to pick image: $e');
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    try {
+      final picker = ImagePicker();
+      final XFile? video = await picker.pickVideo(source: ImageSource.gallery);
+      
+      if (video != null) {
+        final file = File(video.path);
+        final fileSize = await file.length();
+        
+        if (fileSize > 50 * 1024 * 1024) { // 50MB limit
+          _showErrorSnackBar('Video file too large. Maximum size is 50MB.');
+          return;
+        }
+        
+        await _uploadAndSendMedia(file, 'video');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to pick video: $e');
+    }
+  }
+
+  Future<void> _pickDocument() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'xlsx', 'ppt', 'pptx'],
+      );
+      
+      if (result != null && result.files.isNotEmpty) {
+        final file = File(result.files.first.path!);
+        final fileSize = await file.length();
+        
+        if (fileSize > 10 * 1024 * 1024) { // 10MB limit for documents
+          _showErrorSnackBar('Document too large. Maximum size is 10MB.');
+          return;
+        }
+        
+        await _uploadAndSendMedia(file, 'document', fileName: result.files.first.name);
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to pick document: $e');
+    }
+  }
+
+  Future<void> _showImagePreview(File imageFile) async {
+    final colorScheme = Theme.of(context).colorScheme;
+    final TextEditingController captionController = TextEditingController();
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          child: Container(
+            constraints: const BoxConstraints(maxHeight: 600),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppBar(
+                  title: Text('Send Image', style: GoogleFonts.poppins()),
+                  backgroundColor: colorScheme.surface,
+                  elevation: 0,
+                  leading: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context, false),
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        Container(
+                          constraints: const BoxConstraints(maxHeight: 400),
+                          child: Image.file(
+                            imageFile,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: TextField(
+                            controller: captionController,
+                            style: GoogleFonts.poppins(),
+                            decoration: InputDecoration(
+                              hintText: 'Add a caption...',
+                              hintStyle: GoogleFonts.poppins(),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            maxLines: 3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.primary,
+                        foregroundColor: colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: Text('Send', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    
+    if (confirmed == true) {
+      await _uploadAndSendMedia(imageFile, 'image', caption: captionController.text.trim());
+    }
+  }
+
+  Future<void> _uploadAndSendMedia(File file, String mediaType, {String? caption, String? fileName}) async {
+    if (_isUploading) return;
+    
+    setState(() {
+      _isUploading = true;
+      _uploadProgress = 0.0;
+    });
+
+    try {
+      final chatController = ref.read(chatControllerProvider(widget.receiver));
+      final currentUser = FirebaseAuth.instance.currentUser!;
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      
+      // Optimize image if it's an image
+      File fileToUpload = file;
+      if (mediaType == 'image') {
+        fileToUpload = await MediaOptimizationService.optimizeImage(file);
+      }
+      
+      // Create file path
+      final extension = fileToUpload.path.split('.').last;
+      final storagePath = 'chats/${chatController.chatId}/$mediaType/${currentUser.uid}_$timestamp.$extension';
+      
+      // Upload to Firebase Storage
+      final storageRef = FirebaseStorage.instance.ref().child(storagePath);
+      final uploadTask = storageRef.putFile(fileToUpload);
+      
+      // Listen to upload progress
+      uploadTask.snapshotEvents.listen((snapshot) {
+        final progress = snapshot.bytesTransferred / snapshot.totalBytes;
+        setState(() => _uploadProgress = progress);
+      });
+      
+      // Wait for upload completion
+      final taskSnapshot = await uploadTask;
+      final downloadUrl = await taskSnapshot.ref.getDownloadURL();
+      
+      // Pre-cache the uploaded media
+      await MediaCacheService().getMedia(downloadUrl, forceRefresh: true);
+      
+      // Get file size
+      final fileSize = await fileToUpload.length();
+      
+      // Send media message
+      await chatController.sendMediaMessage(
+        downloadUrl,
+        mediaType,
+        fileName,
+        fileSize,
+        null, // thumbnail - implement later for videos
+        caption,
+      );
+      
+      ref.invalidate(chatMessagesProvider(widget.receiver));
+      
+      // Auto-scroll to bottom
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+      
+      // Clean up optimized file if different from original
+      if (fileToUpload.path != file.path) {
+        await fileToUpload.delete();
+      }
+      
+    } catch (e) {
+      _showErrorSnackBar('Failed to send media: $e');
+    } finally {
+      setState(() {
+        _isUploading = false;
+        _uploadProgress = 0.0;
+      });
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: GoogleFonts.poppins()),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -262,6 +573,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            // Upload progress indicator
+            if (_isUploading)
+              Container(
+                padding: const EdgeInsets.all(8),
+                color: colorScheme.surface,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.cloud_upload, color: colorScheme.primary, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Uploading... ${(_uploadProgress * 100).toInt()}%',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    LinearProgressIndicator(
+                      value: _uploadProgress,
+                      backgroundColor: colorScheme.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+                    ),
+                  ],
+                ),
+              ),
             Expanded(
               child: messagesAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -296,6 +636,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         isMe: isMe,
                         timestamp: time,
                         status: isMe ? msg.status : null,
+                        mediaUrl: msg.mediaUrl,
+                        mediaType: msg.mediaType,
+                        fileName: msg.fileName,
+                        fileSize: msg.fileSize,
+                        mediaThumbnail: msg.mediaThumbnail,
                       );
                     },
                   );
@@ -306,6 +651,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               child: Row(
                 children: [
+                  // Attachment button
+                  Material(
+                    color: colorScheme.surfaceContainerHighest,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _isUploading ? null : _showMediaPicker,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Icon(
+                          Icons.attach_file,
+                          color: _isUploading 
+                            ? colorScheme.onSurface.withAlpha((0.4 * 255).toInt())
+                            : colorScheme.primary,
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
                       controller: _controller,
@@ -363,6 +728,50 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MediaPickerOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _MediaPickerOption({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 30),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ],
       ),
     );
   }
