@@ -5,9 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/models/user_model.dart';
+import 'package:smart_chat_app/models/chatbot_model.dart'; // Add this import
 import 'package:smart_chat_app/services/contact_services.dart';
 import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
-import 'package:smart_chat_app/utils/contact_utils.dart'; // Add this import
+import 'package:smart_chat_app/utils/contact_utils.dart';
 
 class ChatsTab extends StatefulWidget {
   final User user;
@@ -17,7 +18,7 @@ class ChatsTab extends StatefulWidget {
   State<ChatsTab> createState() => _ChatsTabState();
 }
 
-class _ChatsTabState extends State<ChatsTab> {
+class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // Add TickerProviderStateMixin
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   final ContactService _contactService = ContactService();
@@ -26,15 +27,35 @@ class _ChatsTabState extends State<ChatsTab> {
   Map<String, String> _contactMapping = {};
   bool _contactsLoaded = false;
 
+  // NEW: Animation controllers for FABs
+  late AnimationController _fabAnimationController;
+  late Animation<double> _fabAnimation;
+
   @override
   void initState() {
     super.initState();
     _loadContacts();
+    
+    // NEW: Initialize animation controller
+    _fabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _fabAnimation = CurvedAnimation(
+      parent: _fabAnimationController,
+      curve: Curves.easeInOut,
+    );
+    
+    // Start animation after build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fabAnimationController.forward();
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _fabAnimationController.dispose(); // NEW: Dispose animation controller
     super.dispose();
   }
 
@@ -44,6 +65,31 @@ class _ChatsTabState extends State<ChatsTab> {
       setState(() => _contactsLoaded = true);
     } catch (e) {
       setState(() => _contactsLoaded = true);
+    }
+  }
+
+  // NEW: Navigate to chatbot chat
+  void _navigateToChatbot() async {
+    try {
+      // Create chatbot user instance
+      final chatbotUser = ChatbotModel.getChatbotUser().toUserModel();
+      
+      // Navigate to chat screen with chatbot
+      Navigator.pushNamed(
+        context,
+        AppRoutes.chat,
+        arguments: chatbotUser,
+      );
+    } catch (e) {
+      // Show error if navigation fails
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to open chatbot. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -133,16 +179,54 @@ class _ChatsTabState extends State<ChatsTab> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
-        icon: const Icon(Icons.add_comment_rounded),
-        label: Text(
-          'New Chat',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        onPressed: () {
-          Navigator.pushNamed(context, AppRoutes.newChat);
+      // NEW: Enhanced FloatingActionButton with Stack for multiple FABs
+      floatingActionButton: AnimatedBuilder(
+        animation: _fabAnimation,
+        builder: (context, child) {
+          return Stack(
+            children: [
+              // NEW: Chatbot FAB positioned above the main FAB
+              Positioned(
+                bottom: 80, // 80px above the main FAB
+                right: 0,
+                child: Transform.scale(
+                  scale: _fabAnimation.value,
+                  child: FloatingActionButton(
+                    heroTag: "chatbot_fab", // Unique hero tag
+                    backgroundColor: colorScheme.secondary,
+                    foregroundColor: colorScheme.onSecondary,
+                    onPressed: _navigateToChatbot,
+                    tooltip: 'Chat with AI Assistant',
+                    child: const Icon(
+                      Icons.smart_toy_rounded, // Robot/AI icon
+                      size: 28,
+                    ),
+                  ),
+                ),
+              ),
+              // EXISTING: Original New Chat FAB (unchanged)
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Transform.scale(
+                  scale: _fabAnimation.value,
+                  child: FloatingActionButton.extended(
+                    heroTag: "new_chat_fab", // Unique hero tag
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    icon: const Icon(Icons.add_comment_rounded),
+                    label: Text(
+                      'New Chat',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                    ),
+                    onPressed: () {
+                      Navigator.pushNamed(context, AppRoutes.newChat);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          );
         },
       ),
       body: SafeArea(
@@ -157,14 +241,7 @@ class _ChatsTabState extends State<ChatsTab> {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                      return Center(
-                        child: Text(
-                          'No chats yet',
-                          style: GoogleFonts.poppins(
-                            color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
-                          ),
-                        ),
-                      );
+                      return _buildEmptyState(colorScheme, isDark); // NEW: Enhanced empty state
                     }
           
                     return FutureBuilder<List<Map<String, dynamic>>>(
@@ -175,14 +252,7 @@ class _ChatsTabState extends State<ChatsTab> {
                         }
           
                         if (!chatListSnapshot.hasData || chatListSnapshot.data!.isEmpty) {
-                          return Center(
-                            child: Text(
-                              'No chats yet',
-                              style: GoogleFonts.poppins(
-                                color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
-                              ),
-                            ),
-                          );
+                          return _buildEmptyState(colorScheme, isDark); // NEW: Enhanced empty state
                         }
           
                         // Updated filtering logic to include local phone numbers
@@ -198,11 +268,33 @@ class _ChatsTabState extends State<ChatsTab> {
           
                         if (filteredChats.isEmpty) {
                           return Center(
-                            child: Text(
-                              _searchQuery.isEmpty ? 'No chats yet' : 'No chats found for "$_searchQuery"',
-                              style: GoogleFonts.poppins(
-                                color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
-                              ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.search_off_rounded,
+                                  size: 64,
+                                  color: colorScheme.onSurface.withAlpha((0.4 * 255).toInt()),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No chats found for "$_searchQuery"',
+                                  style: GoogleFonts.poppins(
+                                    color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                                    fontSize: 16,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                TextButton.icon(
+                                  onPressed: _navigateToChatbot,
+                                  icon: Icon(Icons.smart_toy_rounded, color: colorScheme.secondary),
+                                  label: Text(
+                                    'Try chatting with AI Assistant',
+                                    style: GoogleFonts.poppins(color: colorScheme.secondary),
+                                  ),
+                                ),
+                              ],
                             ),
                           );
                         }
@@ -223,6 +315,83 @@ class _ChatsTabState extends State<ChatsTab> {
                   },
                 ),
         ),
+      ),
+    );
+  }
+
+  // NEW: Enhanced empty state with chatbot suggestion
+  Widget _buildEmptyState(ColorScheme colorScheme, bool isDark) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.chat_bubble_outline_rounded,
+            size: 80,
+            color: colorScheme.onSurface.withAlpha((0.4 * 255).toInt()),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'No chats yet',
+            style: GoogleFonts.poppins(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onSurface.withAlpha((0.8 * 255).toInt()),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Start a conversation with friends or try our AI assistant',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              color: colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Start new chat button
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, AppRoutes.newChat);
+                },
+                icon: const Icon(Icons.add_comment_rounded),
+                label: Text(
+                  'New Chat',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Chatbot button
+              OutlinedButton.icon(
+                onPressed: _navigateToChatbot,
+                icon: const Icon(Icons.smart_toy_rounded),
+                label: Text(
+                  'AI Assistant',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: colorScheme.secondary,
+                  side: BorderSide(color: colorScheme.secondary),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -294,6 +463,24 @@ class _ChatsTabState extends State<ChatsTab> {
           continue;
         }
 
+        // NEW: Special handling for chatbot
+        if (ChatbotModel.isChatbotUser(otherUserId)) {
+          final chatbot = ChatbotModel.getChatbotUser();
+          chatList.add({
+            'chatData': data,
+            'otherUserId': otherUserId,
+            'userName': chatbot.name,
+            'userPhone': chatbot.phoneNumber,
+            'localPhone': chatbot.phoneNumber,
+            'userPic': chatbot.photoUrl,
+            'registeredName': chatbot.name,
+            'isContactName': false,
+            'userExists': true,
+            'isChatbot': true, // NEW: Mark as chatbot
+          });
+          continue;
+        }
+
         // Get other user's data
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
@@ -334,6 +521,7 @@ class _ChatsTabState extends State<ChatsTab> {
           'registeredName': registeredName,
           'isContactName': _hasContactName(userPhone),
           'userExists': userExists,
+          'isChatbot': false, // Regular user
         });
       } catch (e) {
         continue;
@@ -349,6 +537,7 @@ class _ChatsTabState extends State<ChatsTab> {
     final userPhone = chatData['userPhone'] as String;
     final userPic = chatData['userPic'] as String;
     final userExists = chatData['userExists'] as bool? ?? true;
+    final isChatbot = chatData['isChatbot'] as bool? ?? false; // NEW: Check if chatbot
 
     final lastMessage = data['lastMessage']?.toString().trim() ?? '';
     final displayMessage = lastMessage.isEmpty ? 'Tap to start conversation' : lastMessage;
@@ -362,12 +551,21 @@ class _ChatsTabState extends State<ChatsTab> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       color: colorScheme.surface.withAlpha(isDark ? (0.55 * 255).toInt() : (0.85 * 255).toInt()),
       child: ListTile(
-        leading: _buildAvatar(
-          userPic: userPic,
-          displayName: userName,
-          colorScheme: colorScheme,
-          userExists: userExists,
-        ),
+        leading: isChatbot 
+            ? CircleAvatar(
+                backgroundColor: colorScheme.secondaryContainer,
+                child: Icon(
+                  Icons.smart_toy_rounded,
+                  color: colorScheme.secondary,
+                  size: 28,
+                ),
+              )
+            : _buildAvatar(
+                userPic: userPic,
+                displayName: userName,
+                colorScheme: colorScheme,
+                userExists: userExists,
+              ),
         title: Row(
           children: [
             Expanded(
@@ -375,14 +573,31 @@ class _ChatsTabState extends State<ChatsTab> {
                 userName,
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
+                  color: isChatbot ? colorScheme.secondary : colorScheme.onSurface, // NEW: Special color for chatbot
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            // NEW: Show AI badge for chatbot
+            if (isChatbot)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'AI',
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.secondary,
+                  ),
+                ),
+              ),
             // Show warning icon for non-registered users
-            if (!userExists)
+            if (!userExists && !isChatbot)
               Tooltip(
                 message: 'User hasn\'t signed up yet',
                 child: Icon(
@@ -425,13 +640,13 @@ class _ChatsTabState extends State<ChatsTab> {
                 margin: const EdgeInsets.only(top: 4),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: colorScheme.primary,
+                  color: isChatbot ? colorScheme.secondary : colorScheme.primary, // NEW: Different color for chatbot unread
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   unreadCount,
                   style: GoogleFonts.poppins(
-                    color: colorScheme.onPrimary,
+                    color: isChatbot ? colorScheme.onSecondary : colorScheme.onPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -440,6 +655,12 @@ class _ChatsTabState extends State<ChatsTab> {
           ],
         ),
         onTap: () async {
+          // NEW: Handle chatbot navigation
+          if (isChatbot) {
+            _navigateToChatbot();
+            return;
+          }
+
           if (userExists) {
             // User has Firestore document, navigate normally
             final userDoc = await FirebaseFirestore.instance.collection('users').doc(otherUserId).get();
