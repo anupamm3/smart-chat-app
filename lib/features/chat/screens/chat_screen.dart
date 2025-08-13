@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/features/chat/controller/chat_controller.dart';
+import 'package:smart_chat_app/models/chatbot_model.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/models/message_model.dart';
 import 'package:smart_chat_app/services/contact_services.dart';
@@ -35,7 +36,7 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends ConsumerState<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStateMixin{
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ContactService _contactService = ContactService();
@@ -44,19 +45,54 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _isUploading = false;
   double _uploadProgress = 0.0;
 
+  bool get _isChatbotChat => ChatbotModel.isChatbotUser(widget.receiver.uid);
+  late AnimationController _typingAnimationController;
+  late Animation<double> _typingAnimation;
+  Timer? _typingTimer;
+
   @override
   void initState() {
     super.initState();
+    _typingAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _typingAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _typingAnimationController,
+      curve: Curves.easeInOut,
+    ));
     // Mark messages as seen when chat is opened
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(chatControllerProvider(widget.receiver)).markMessagesAsSeen();
       _loadContacts();
+      if (_isChatbotChat) {
+        _startTypingListener();
+      }
     });
   }
 
   @override
   void dispose() {
+    _typingAnimationController.dispose();
+    _typingTimer?.cancel();
     super.dispose();
+  }
+
+  void _startTypingListener() {
+    _typingTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      final chatController = ref.read(chatControllerProvider(widget.receiver));
+      if (chatController.isTyping) {
+        if (!_typingAnimationController.isAnimating) {
+          _typingAnimationController.repeat();
+        }
+      } else {
+        _typingAnimationController.stop();
+        _typingAnimationController.reset();
+      }
+    });
   }
 
   Future<void> _loadContacts() async {
@@ -73,6 +109,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   String get _displayName {
     if (!_contactsLoaded) return 'Loading...';
+    if (_isChatbotChat) {
+      return ChatbotModel.getChatbotUser().name;
+    }
     return _contactService.getDisplayName(
       widget.receiver.phoneNumber,
       widget.receiver.name,
@@ -86,24 +125,48 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _sendMessage(ChatController chatController) async {
-    await chatController.sendMessage(_controller.text);
-    _controller.clear();
-    ref.invalidate(chatMessagesProvider(widget.receiver));
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
+    final messageText = _controller.text.trim();
+    if (messageText.isEmpty) return;
 
+    // 🔧 FIXED: Clear text field immediately before sending
+    _controller.clear();
+    
+    try {
+      // This will now complete quickly since chatbot response is non-blocking
+      await chatController.sendMessage(messageText);
+      ref.invalidate(chatMessagesProvider(widget.receiver));
+      
+      // Auto-scroll to bottom
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    } catch (e) {
+      // If sending the user message fails, optionally restore text
+      debugPrint('Failed to send message: $e');
+      // Uncomment if you want to restore text on failure:
+      // _controller.text = messageText;
+    }
+  }
   Future<void> _onScheduleMessagePressed() async {
     final colorScheme = Theme.of(context).colorScheme;
     final chatController = ref.read(chatControllerProvider(widget.receiver));
     final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    if (_isChatbotChat) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text('Scheduled messages are not available for AI chats', style: GoogleFonts.poppins()),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     // 1. Pick date
     DateTime? pickedDate = await showDatePicker(
@@ -514,6 +577,75 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
+  Widget _buildTypingIndicator(ColorScheme colorScheme) {
+    return AnimatedBuilder(
+      animation: _typingAnimation,
+      builder: (context, child) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: colorScheme.secondaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.smart_toy_rounded,
+                  color: colorScheme.secondary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: colorScheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'AI is thinking',
+                      style: GoogleFonts.poppins(
+                        color: colorScheme.secondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 20,
+                      height: 8,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: List.generate(3, (index) {
+                          return AnimatedContainer(
+                            duration: Duration(milliseconds: 300 + (index * 100)),
+                            width: 4,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: colorScheme.secondary.withOpacity(
+                                0.4 + (0.6 * _typingAnimation.value),
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -534,7 +666,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   arguments: widget.receiver,
                 );
               },
-              child: CircleAvatar(
+              child: _isChatbotChat
+                  ? CircleAvatar(
+                      backgroundColor: colorScheme.secondaryContainer,
+                      child: Icon(
+                        Icons.smart_toy_rounded,
+                        color: colorScheme.secondary,
+                        size: 24,
+                      ),
+                    )
+                  : CircleAvatar(
                 backgroundImage: widget.receiver.photoUrl.isNotEmpty
                     ? NetworkImage(widget.receiver.photoUrl)
                     : null,
@@ -556,19 +697,64 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                _displayName,
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.onSurface,
-                ),
-                overflow: TextOverflow.ellipsis,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _displayName,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      color: _isChatbotChat ? colorScheme.secondary : colorScheme.onSurface,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (_isChatbotChat)
+                    Text(
+                      'Powered by Gemini AI',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: colorScheme.secondary.withAlpha((0.7 * 255).toInt()),
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                ],
               ),
             ),
           ],
         ),
         backgroundColor: colorScheme.surface,
         elevation: 1,
+        actions: _isChatbotChat
+            ? [
+                Container(
+                  margin: const EdgeInsets.only(right: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 14,
+                        color: colorScheme.secondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'AI',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.secondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ]
+            : null,
       ),
       body: SafeArea(
         child: Column(
@@ -615,34 +801,73 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         
                   if (messages.isEmpty) {
                     return Center(
-                      child: Text(
-                        'No messages yet',
-                        style: GoogleFonts.poppins(
-                          color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (_isChatbotChat) ...[
+                            Icon(
+                              Icons.smart_toy_rounded,
+                              size: 64,
+                              color: colorScheme.secondary.withOpacity(0.5),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Hi! I\'m your AI Assistant',
+                              style: GoogleFonts.poppins(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.secondary,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Ask me anything! I can help with questions,\ncreative writing, problem solving, and more.',
+                              style: GoogleFonts.poppins(
+                                color: colorScheme.onSurface.withOpacity(0.7),
+                                fontSize: 14,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ] else ...[
+                            Text(
+                              'No messages yet',
+                              style: GoogleFonts.poppins(
+                                color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     );
                   }
-                  return ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                    itemCount: messages.length,
-                    itemBuilder: (context, index) {
-                      final msg = messages[index];
-                      final isMe = msg.senderId == chatController.currentUser.uid;
-                      final time = msg.timestamp;
-                      return MessageBubble(
-                        text: msg.text,
-                        isMe: isMe,
-                        timestamp: time,
-                        status: isMe ? msg.status : null,
-                        mediaUrl: msg.mediaUrl,
-                        mediaType: msg.mediaType,
-                        fileName: msg.fileName,
-                        fileSize: msg.fileSize,
-                        mediaThumbnail: msg.mediaThumbnail,
-                      );
-                    },
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          itemCount: messages.length,
+                          itemBuilder: (context, index) {
+                            final msg = messages[index];
+                            final isMe = msg.senderId == chatController.currentUser.uid;
+                            final time = msg.timestamp;
+                            return MessageBubble(
+                              text: msg.text,
+                              isMe: isMe,
+                              timestamp: time,
+                              status: isMe ? msg.status : null,
+                              mediaUrl: msg.mediaUrl,
+                              mediaType: msg.mediaType,
+                              fileName: msg.fileName,
+                              fileSize: msg.fileSize,
+                              mediaThumbnail: msg.mediaThumbnail,
+                            );
+                          },
+                        ),
+                      ),
+                      if (_isChatbotChat && chatController.isTyping)
+                        _buildTypingIndicator(colorScheme),
+                    ],
                   );
                 },
               ),
@@ -676,7 +901,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       controller: _controller,
                       style: GoogleFonts.poppins(),
                       decoration: InputDecoration(
-                        hintText: 'Type a message...',
+                        hintText: _isChatbotChat 
+                            ? 'Ask me anything...' 
+                            : 'Type a message...',
                         hintStyle: GoogleFonts.poppins(
                           color: colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
                         ),
@@ -692,24 +919,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Material(
-                    color: colorScheme.primary,
-                    shape: const CircleBorder(),
-                    elevation: 4,
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: _onScheduleMessagePressed,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Icon(
-                          Icons.schedule,
-                          color: Colors.white,
-                          size: 28,
+                  if (!_isChatbotChat)
+                    Material(
+                      color: colorScheme.primary,
+                      shape: const CircleBorder(),
+                      elevation: 4,
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: _onScheduleMessagePressed,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Icon(
+                            Icons.schedule,
+                            color: Colors.white,
+                            size: 28,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
+                  if (!_isChatbotChat) const SizedBox(width: 8),
                   Material(
                     color: colorScheme.primary,
                     shape: const CircleBorder(),
