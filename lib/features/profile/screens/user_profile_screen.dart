@@ -6,6 +6,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/models/user_model.dart';
+import 'package:smart_chat_app/models/chatbot_model.dart'; // NEW: Import ChatbotModel
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -39,6 +40,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   // Current values (updated after successful save)
   late String _currentName;
   late String _currentAbout;
+
+  // NEW: Chatbot detection
+  bool get _isChatbotProfile => ChatbotModel.isChatbotUser(widget.user.uid);
 
   @override
   void initState() {
@@ -74,6 +78,82 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     } catch (e) {
       print('Error loading contacts: $e');
     }
+  }
+
+  // NEW: Build chatbot avatar widget
+  Widget _buildChatbotAvatar({required double radius}) {
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+      child: ClipOval(
+        child: Container(
+          width: radius * 2,
+          height: radius * 2,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.secondaryContainer,
+            shape: BoxShape.circle,
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Background gradient for extra visual appeal
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                      Theme.of(context).colorScheme.secondaryContainer,
+                    ],
+                  ),
+                ),
+              ),
+              // Try to use asset image first, fallback to icon
+              Image.asset(
+                'assets/images/virtualAssistant.png',
+                width: radius * 1.4,
+                height: radius * 1.4,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  // Fallback to robot icon if image fails to load
+                  return Icon(
+                    Icons.smart_toy_rounded,
+                    size: radius * 1.2,
+                    color: Theme.of(context).colorScheme.secondary,
+                  );
+                },
+              ),
+              // Optional: Add a subtle border
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+                    width: 2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // NEW: Build regular user avatar
+  Widget _buildUserAvatar({required double radius}) {
+    return CircleAvatar(
+      radius: radius,
+      backgroundImage: _localImage != null
+          ? FileImage(_localImage!)
+          : (widget.user.photoUrl.isNotEmpty
+              ? NetworkImage(widget.user.photoUrl)
+              : null) as ImageProvider?,
+      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+      child: (_localImage == null && widget.user.photoUrl.isEmpty)
+          ? Icon(Icons.person, size: radius * 0.8, color: Theme.of(context).colorScheme.primary)
+          : null,
+    );
   }
   
   Future<void> _uploadProfileImage(File imageFile) async {
@@ -324,17 +404,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final String aboutText = _currentAbout.isNotEmpty
-        ? _currentAbout
-        : "Hey there! I am using Smart Chat.";
+    
+    // NEW: Use different about text for chatbot
+    final String aboutText = _isChatbotProfile 
+        ? "🤖 I'm your AI assistant powered by Gemini! I can help you with questions, creative tasks, problem-solving, and friendly conversation. Ask me anything!"
+        : (_currentAbout.isNotEmpty ? _currentAbout : "Hey there! I am using Smart Chat.");
 
     // Get display name using ContactService for non-self profiles
     String displayName = _currentName;
-    // bool hasContactName = false;
-    
-    // if (!isSelf) {
-    //   hasContactName = _contactService.hasContactName(widget.user.phoneNumber, _contactMapping);
-    // }
 
     void showProfileImageDialog() {
       showDialog(
@@ -343,25 +420,52 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           return Dialog(
             backgroundColor: Colors.transparent,
             insetPadding: const EdgeInsets.all(16),
-            child: _localImage != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.file(_localImage!, fit: BoxFit.contain),
+            child: _isChatbotProfile
+                ? Container(
+                    width: 300,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      color: colorScheme.secondaryContainer,
+                      borderRadius: BorderRadius.circular(150),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/images/virtualAssistant.png',
+                          width: 200,
+                          height: 200,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.smart_toy_rounded,
+                              size: 150,
+                              color: colorScheme.secondary,
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   )
-                : widget.user.photoUrl.isNotEmpty
+                : _localImage != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: Image.network(widget.user.photoUrl, fit: BoxFit.contain),
+                        child: Image.file(_localImage!, fit: BoxFit.contain),
                       )
-                    : Container(
-                        width: 180,
-                        height: 180,
-                        decoration: BoxDecoration(
-                          color: colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(90),
-                        ),
-                        child: Icon(Icons.person, size: 120, color: colorScheme.primary),
-                      ),
+                    : widget.user.photoUrl.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.network(widget.user.photoUrl, fit: BoxFit.contain),
+                          )
+                        : Container(
+                            width: 180,
+                            height: 180,
+                            decoration: BoxDecoration(
+                              color: colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(90),
+                            ),
+                            child: Icon(Icons.person, size: 120, color: colorScheme.primary),
+                          ),
           );
         },
       );
@@ -376,21 +480,52 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ? SystemUiOverlayStyle.light
           : SystemUiOverlayStyle.dark,
         title: Text(
-          'Profile',
+          _isChatbotProfile ? 'AI Assistant Profile' : 'Profile',
           style: GoogleFonts.poppins(
             fontWeight: FontWeight.bold,
-            color: colorScheme.onSurface,
+            color: _isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.settings, color: colorScheme.onSurface),
-            tooltip: 'Settings',
-            onPressed: () {
-              Navigator.pushNamed(context, AppRoutes.settings);
-            },
-          ),
-        ],
+        // NEW: Hide settings for chatbot profile
+        actions: _isChatbotProfile 
+            ? [
+                Container(
+                  margin: const EdgeInsets.only(right: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.auto_awesome,
+                        size: 14,
+                        color: colorScheme.secondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'AI',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.secondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ]
+            : [
+                IconButton(
+                  icon: Icon(Icons.settings, color: colorScheme.onSurface),
+                  tooltip: 'Settings',
+                  onPressed: () {
+                    Navigator.pushNamed(context, AppRoutes.settings);
+                  },
+                ),
+              ],
       ),
       body: Container(
         width: double.infinity,
@@ -399,14 +534,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           gradient: LinearGradient(
             colors: Theme.of(context).brightness == Brightness.dark
                 ? [
-                    colorScheme.surfaceContainerHighest,
+                    _isChatbotProfile ? colorScheme.secondaryContainer : colorScheme.surfaceContainerHighest,
                     colorScheme.surface,
-                    colorScheme.primaryContainer
+                    _isChatbotProfile ? colorScheme.secondaryContainer : colorScheme.primaryContainer
                   ]
                 : [
-                    colorScheme.primaryContainer,
+                    _isChatbotProfile ? colorScheme.secondaryContainer : colorScheme.primaryContainer,
                     colorScheme.surface,
-                    colorScheme.surfaceContainerHighest
+                    _isChatbotProfile ? colorScheme.secondaryContainer : colorScheme.surfaceContainerHighest
                   ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -422,7 +557,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Profile Image with tap
+                    // Profile Image with tap - UPDATED
                     Stack(
                       alignment: Alignment.topRight,
                       children: [
@@ -430,27 +565,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           onTap: showProfileImageDialog,
                           child: Hero(
                             tag: 'profile_image_${widget.user.uid}',
-                            child: CircleAvatar(
-                              radius: 75,
-                              backgroundImage: _localImage != null
-                                  ? FileImage(_localImage!)
-                                  : (widget.user.photoUrl.isNotEmpty
-                                      ? NetworkImage(widget.user.photoUrl)
-                                      : null) as ImageProvider?,
-                              backgroundColor: colorScheme.primaryContainer,
-                              child: (_localImage == null && widget.user.photoUrl.isEmpty)
-                                  ? Icon(Icons.person, size: 60, color: colorScheme.primary)
-                                  : null,
-                            ),
+                            child: _isChatbotProfile
+                                ? _buildChatbotAvatar(radius: 75)
+                                : _buildUserAvatar(radius: 75),
                           ),
                         ),
-                        if (isSelf && (widget.user.photoUrl.isNotEmpty || _localImage != null))
+                        // NEW: Hide edit/remove buttons for chatbot
+                        if (isSelf && !_isChatbotProfile && (widget.user.photoUrl.isNotEmpty || _localImage != null))
                           Positioned(
                             top: -2,
                             right: -2,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: colorScheme.primary, // Match your theme
+                                backgroundColor: colorScheme.primary,
                                 foregroundColor: colorScheme.onPrimary,
                                 shape: const CircleBorder(),
                                 padding: const EdgeInsets.all(4),
@@ -492,8 +619,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           ),
                       ],
                     ),
-                    // Edit button (only for self)
-                    if (isSelf)
+                    // Edit button (only for self and not chatbot) - UPDATED
+                    if (isSelf && !_isChatbotProfile)
                       Padding(
                         padding: const EdgeInsets.only(top: 12, bottom: 24),
                         child: Center(
@@ -517,11 +644,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     else
                       const SizedBox(height: 36),
             
-                    // Name Section with inline editing
+                    // Name Section with inline editing - UPDATED
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.person, color: colorScheme.primary, size: 32),
+                        Icon(
+                          _isChatbotProfile ? Icons.smart_toy_rounded : Icons.person, 
+                          color: _isChatbotProfile ? colorScheme.secondary : colorScheme.primary, 
+                          size: 32
+                        ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
@@ -534,10 +665,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     style: GoogleFonts.poppins(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 20,
-                                      color: colorScheme.onSurface,
+                                      color: _isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface,
                                     ),
                                   ),
-                                  if (isSelf && !_isEditingName && !_isUpdatingName) ...[
+                                  // NEW: Hide edit for chatbot
+                                  if (isSelf && !_isChatbotProfile && !_isEditingName && !_isUpdatingName) ...[
                                     const SizedBox(width: 8),
                                     GestureDetector(
                                       onTap: () {
@@ -545,7 +677,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                           _isEditingName = true;
                                           _nameController.text = _currentName;
                                         });
-                                        // Auto focus after rebuild
                                         WidgetsBinding.instance.addPostFrameCallback((_) {
                                           if (mounted) {
                                             FocusScope.of(context).requestFocus(FocusNode());
@@ -563,9 +694,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               ),
                               const SizedBox(height: 8),
                               
-                              // Content area
-                              if (_isEditingName) ...[
-                                // Edit mode
+                              // Content area - UPDATED
+                              if (_isEditingName && !_isChatbotProfile) ...[
+                                // Edit mode (hidden for chatbot)
                                 Column(
                                   children: [
                                     TextField(
@@ -597,7 +728,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                       maxLength: 50,
                                       onSubmitted: (_) => _updateName(),
                                       onChanged: (value) {
-                                        setState(() {}); // Update counter
+                                        setState(() {});
                                       },
                                     ),
                                     const SizedBox(height: 8),
@@ -663,11 +794,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               ] else ...[
                                 // Display mode
                                 Text(
-                                  displayName, // Shows contact name for others, actual name for self
+                                  displayName,
                                   style: GoogleFonts.poppins(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
-                                    color: colorScheme.onSurface.withAlpha((0.8 * 255).toInt()),
+                                    color: (_isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface).withAlpha((0.8 * 255).toInt()),
                                   ),
                                 ),
                               ],
@@ -678,11 +809,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                     const SizedBox(height: 28),
             
-                    // About Section with inline editing
+                    // About Section with inline editing - UPDATED
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.info_outline, color: colorScheme.primary, size: 32),
+                        Icon(
+                          Icons.info_outline, 
+                          color: _isChatbotProfile ? colorScheme.secondary : colorScheme.primary, 
+                          size: 32
+                        ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
@@ -695,10 +830,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                     style: GoogleFonts.poppins(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 20,
-                                      color: colorScheme.onSurface,
+                                      color: _isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface,
                                     ),
                                   ),
-                                  if (isSelf && !_isEditingAbout && !_isUpdatingAbout) ...[
+                                  // NEW: Hide edit for chatbot
+                                  if (isSelf && !_isChatbotProfile && !_isEditingAbout && !_isUpdatingAbout) ...[
                                     const SizedBox(width: 8),
                                     GestureDetector(
                                       onTap: () {
@@ -706,7 +842,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                           _isEditingAbout = true;
                                           _aboutController.text = _currentAbout;
                                         });
-                                        // Auto focus after rebuild
                                         WidgetsBinding.instance.addPostFrameCallback((_) {
                                           if (mounted) {
                                             FocusScope.of(context).requestFocus(FocusNode());
@@ -724,9 +859,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                               ),
                               const SizedBox(height: 8),
                               
-                              // Content area
-                              if (_isEditingAbout) ...[
-                                // Edit mode
+                              // Content area - UPDATED
+                              if (_isEditingAbout && !_isChatbotProfile) ...[
+                                // Edit mode (hidden for chatbot)
                                 Column(
                                   children: [
                                     TextField(
@@ -757,7 +892,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                       ),
                                       maxLength: 200,
                                       onChanged: (value) {
-                                        setState(() {}); // Update counter
+                                        setState(() {});
                                       },
                                     ),
                                     const SizedBox(height: 8),
@@ -825,7 +960,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                                   aboutText,
                                   style: GoogleFonts.poppins(
                                     fontSize: 14,
-                                    color: colorScheme.onSurface.withAlpha((0.8 * 255).toInt()),
+                                    color: (_isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface).withAlpha((0.8 * 255).toInt()),
                                   ),
                                 ),
                               ],
@@ -836,29 +971,35 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                     const SizedBox(height: 28),
             
-                    // Phone Section (read-only)
+                    // Phone Section (read-only) - UPDATED
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.call, color: colorScheme.primary, size: 32),
+                        Icon(
+                          _isChatbotProfile ? Icons.computer : Icons.call, 
+                          color: _isChatbotProfile ? colorScheme.secondary : colorScheme.primary, 
+                          size: 32
+                        ),
                         const SizedBox(width: 16),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Phone",
+                              _isChatbotProfile ? "Type" : "Phone",
                               style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 20,
-                                color: colorScheme.onSurface,
+                                color: _isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              PhoneUtils.formatForDisplay(widget.user.phoneNumber),
+                              _isChatbotProfile 
+                                  ? "AI Assistant • Powered by Gemini" 
+                                  : PhoneUtils.formatForDisplay(widget.user.phoneNumber),
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
-                                color: colorScheme.onSurface.withAlpha((0.8 * 255).toInt()),
+                                color: (_isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface).withAlpha((0.8 * 255).toInt()),
                               ),
                             ),
                           ],
