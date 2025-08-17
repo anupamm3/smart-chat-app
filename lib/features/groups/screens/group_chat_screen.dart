@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:smart_chat_app/features/profile/screens/group_profile_screen.dart';
+import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 import 'package:smart_chat_app/widgets/message_bubble.dart';
 
@@ -80,6 +82,8 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
 
     String scheduledText = '';
     DateTime? scheduledDateTime;
+
+    if(!mounted) return;
 
     await showDialog(
       context: context,
@@ -169,30 +173,41 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
     if (scheduledText.isNotEmpty && scheduledDateTime != null) {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
-      await FirebaseFirestore.instance
-          .collection('groups')
-          .doc(widget.groupId)
-          .collection('messages')
-          .add({
-        'text': scheduledText,
-        'senderId': user.uid,
-        'receiverId': null,
-        'type': 'scheduled',
-        'scheduledTime': Timestamp.fromDate(scheduledDateTime!),
-        'timestamp': null,
-        'sent': false,
-        'status': 'pending',
-      });
+      try {
+        await FirebaseFirestore.instance
+            .collection('groups')
+            .doc(widget.groupId)
+            .collection('messages')
+            .add({
+          'text': scheduledText,
+          'senderId': user.uid,
+          'receiverId': null,
+          'type': 'scheduled',
+          'scheduledTime': Timestamp.fromDate(scheduledDateTime!),
+          'timestamp': null,
+          'sent': false,
+          'status': 'pending',
+        });
 
-      await FirebaseFirestore.instance.collection('groups').doc(widget.groupId).set({
-        'lastMessage': '[Scheduled]',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+        await FirebaseFirestore.instance.collection('groups').doc(widget.groupId).set({
+          'lastMessage': '[Scheduled]',
+          'lastMessageTime': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Message scheduled!', style: GoogleFonts.poppins())),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Message scheduled!', style: GoogleFonts.poppins())),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to schedule message', style: GoogleFonts.poppins()),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
       }
     }
   }
@@ -253,8 +268,11 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
         leading: BackButton(color: colorScheme.primary),
         title: GestureDetector(
           onTap: () {
-            // TODO: Navigate to group profile screen with groupId
-            // Navigator.pushNamed(context, '/group_profile', arguments: widget.groupId);
+            Navigator.pushNamed(
+              context,
+              AppRoutes.groupProfile,
+              arguments: widget.groupId,
+            );
           },
           child: Row(
             children: [
