@@ -242,13 +242,9 @@ class ChatbotModel extends UserModel {
     return uid.hashCode ^ name.hashCode ^ isAI.hashCode ^ version.hashCode;
   }
 
-  /// Predefined chatbot personalities (for future expansion)
   static List<ChatbotModel> getPredefinedChatbots() {
     return [
-      getChatbotUser(), // Default assistant
-      // Future: Add specialized bots
-      // ChatbotModel(uid: 'creative_bot', name: 'Creative Writer', ...),
-      // ChatbotModel(uid: 'coding_bot', name: 'Code Helper', ...),
+      getChatbotUser(),
     ];
   }
 }

@@ -60,7 +60,6 @@ class SmartChatApp extends ConsumerWidget {
             ref.invalidate(chatControllerProvider);
             ref.invalidate(chatMessagesProvider);
           } catch (e) {
-            // Ignore invalidation errors during app startup
             debugPrint('Provider invalidation error: $e');
           }
         }
@@ -277,7 +276,6 @@ class BrandedSplashScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            // Animated loader (can be replaced with Lottie or custom animation)
             CircularProgressIndicator(
               color: colorScheme.onSurface,
               strokeWidth: 3,

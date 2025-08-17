@@ -3,7 +3,6 @@ import 'package:smart_chat_app/secrets.dart';
 class ChatbotConfig {
   // API Configuration
   static String get geminiApiKey {
-    // Try environment variable first, then fallback to secrets
     const envKey = String.fromEnvironment('GEMINI_API_KEY');
     if (envKey.isNotEmpty) return envKey;
     return ApiSecrets.geminiApiKey;
@@ -100,18 +99,5 @@ Always maintain a warm, approachable tone.''';
       'maxRequestsPerDay': maxRequestsPerDay,
       'isConfigured': isApiKeyValid,
     };
-  }
-
-  static void debugConfiguration() {
-    print('🔍 Chatbot Configuration Debug:');
-    print('📝 API Key configured: ${isApiKeyValid}');
-    print('📝 API Key length: ${geminiApiKey.length}');
-    print('📝 API Key preview: ${geminiApiKey.length > 10 ? geminiApiKey.substring(0, 10) : 'too short'}...');
-    print('📝 Model name: $modelName');
-    print('📝 Temperature: $temperature');
-    print('📝 Max tokens: $maxTokens');
-    
-    final validation = validateConfig();
-    print('📊 Validation result: $validation');
   }
 }

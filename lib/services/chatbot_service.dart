@@ -37,13 +37,8 @@ class ChatbotService {
 
       // Validate API key
       if (!ChatbotConfig.isApiKeyValid) {
-        debugPrint('❌ API Key validation failed');
-        debugPrint('📝 API Key length: ${ChatbotConfig.geminiApiKey.length}');
-        debugPrint('📝 API Key starts with: ${ChatbotConfig.geminiApiKey.length > 10 ? ChatbotConfig.geminiApiKey.substring(0, 10) : 'too short'}...');
         return false;
       }
-
-      debugPrint('🔑 Initializing Gemini with API key: ${_apiKey.substring(0, 10)}...');
 
       // Initialize the model with safety settings
       _model = GenerativeModel(
@@ -67,11 +62,8 @@ class ChatbotService {
       _chatSession = _model!.startChat();
 
       _isInitialized = true;
-      debugPrint('✅ Gemini AI initialized successfully');
       return true;
     } catch (e) {
-      debugPrint('❌ Gemini initialization failed: $e');
-      debugPrint('📝 Error type: ${e.runtimeType}');
       _isInitialized = false;
       return false;
     }
@@ -84,14 +76,10 @@ class ChatbotService {
 
   for (int attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      debugPrint('📤 Sending message to Gemini (attempt $attempt/$maxRetries): $userMessage');
-
       // Check initialization
       if (!_isInitialized) {
-        debugPrint('🔄 Gemini not initialized, attempting to initialize...');
         final initialized = await initializeGemini();
         if (!initialized) {
-          debugPrint('❌ Failed to initialize Gemini');
           return _handleError('AI service is currently unavailable. Please try again later.');
         }
       }
@@ -103,7 +91,6 @@ class ChatbotService {
 
       // Check rate limiting
       if (attempt == 1 && !_checkRateLimit()) {
-        debugPrint('⏰ Rate limit exceeded');
         return 'I\'m receiving too many messages right now. Please wait a moment and try again. ⏰';
       }
 
@@ -117,24 +104,18 @@ Please respond as a helpful AI assistant in a conversational manner.''';
       // Simulate typing delay for realistic experience
       await _simulateTypingDelay(userMessage);
 
-      debugPrint('🤖 Sending to Gemini API...');
-      
       // Send message to Gemini
       final response = await _chatSession!.sendMessage(
         Content.text(contextualMessage),
       );
 
-      debugPrint('📥 Received response from Gemini');
-
       final responseText = response.text;
       if (responseText == null || responseText.isEmpty) {
-        debugPrint('⚠️ Empty response from Gemini');
         return _handleError('I couldn\'t generate a response right now. Could you try rephrasing your message?');
       }
 
       // Format and return response
       final formattedResponse = _formatResponse(responseText);
-      debugPrint('✅ Formatted response: ${formattedResponse.substring(0, formattedResponse.length.clamp(0, 100))}...');
       _updateRateLimitingOnSuccess();
       logUsageStats();
       
@@ -144,8 +125,6 @@ Please respond as a helpful AI assistant in a conversational manner.''';
       return formattedResponse;
 
     } catch (e) {
-      debugPrint('❌ Gemini API error (attempt $attempt/$maxRetries): $e');
-      
       // Check if it's a server overload error
       final errorString = e.toString().toLowerCase();
       final isServerOverload = errorString.contains('503') || 
@@ -154,14 +133,9 @@ Please respond as a helpful AI assistant in a conversational manner.''';
       
       // If it's server overload and we have retries left, wait and try again
       if (isServerOverload && attempt < maxRetries) {
-        debugPrint('⏳ Server overloaded, retrying in ${retryDelay.inSeconds} seconds...');
         await Future.delayed(retryDelay);
         continue; // Try again
       }
-      
-      // If all retries failed or it's a different error, handle it
-      debugPrint('📝 Error details: ${e.toString()}');
-      debugPrint('📝 Error type: ${e.runtimeType}');
       
       // Specific error handling
       if (e.toString().contains('API_KEY_INVALID')) {
@@ -216,10 +190,6 @@ Please respond as a helpful AI assistant in a conversational manner.''';
         return false;
       }
     }
-    
-    // _lastRequestTime = now;
-    // _requestCount++;
-    // _dailyRequestCount++;
     return true;
   }
 
@@ -245,11 +215,6 @@ Please respond as a helpful AI assistant in a conversational manner.''';
     // Remove excessive whitespace
     String formatted = response.trim().replaceAll(RegExp(r'\n\s*\n\s*\n'), '\n\n');
     
-    // Ensure response isn't too long
-    // if (formatted.length > 500) {
-    //   formatted = formatted.substring(0, 497) + '...';
-    // }
-    
     // Add conversational elements if response seems too formal
     if (!formatted.contains('!') && !formatted.contains('?') && !formatted.contains('😊') && !formatted.contains('👍')) {
       // Add subtle conversational touch for dry responses
@@ -272,8 +237,6 @@ Please respond as a helpful AI assistant in a conversational manner.''';
   String _handleError(dynamic error) {
     final errorString = error.toString().toLowerCase();
 
-    debugPrint('🔍 Handling error: $errorString');
-    
     // Network/connectivity errors
     if (errorString.contains('network') || errorString.contains('connection')) {
       return 'I\'m having trouble connecting right now. Please check your internet connection and try again. 🌐';
