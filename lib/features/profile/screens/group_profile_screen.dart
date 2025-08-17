@@ -118,14 +118,6 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
     }
   }
 
-  Future<void> _refreshGroupData() async {
-    setState(() {
-      _isLoadingGroup = true;
-      _isLoadingMembers = true;
-    });
-    await _loadGroupData();
-  }
-
   void _navigateToUserProfile(UserModel user) {
     Navigator.pushNamed(
       context,

@@ -171,56 +171,37 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildImageWidget(BuildContext context) {
+    const double imageWidth = 220;
+    const double imageHeight = 220;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 280, maxHeight: 300),
+        width: imageWidth,
+        height: imageHeight,
+        color: Colors.grey[300],
         child: FutureBuilder<Uint8List?>(
           future: MediaCacheService().getMedia(mediaUrl!),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Container(
-                height: 200,
-                width: 280,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const CircularProgressIndicator(),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Loading...',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                width: imageWidth,
+                height: imageHeight,
+                color: Colors.grey[300],
+                child: const Center(child: CircularProgressIndicator()),
               );
             }
 
             if (snapshot.hasError || !snapshot.hasData) {
               return GestureDetector(
                 onTap: () async {
-                  // Retry with force refresh
                   await MediaCacheService().invalidateMedia(mediaUrl!);
-                  // Trigger rebuild
                   (context as Element).markNeedsBuild();
                 },
                 child: Container(
-                  height: 200,
-                  width: 280,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[400]!),
-                  ),
+                  width: imageWidth,
+                  height: imageHeight,
+                  color: Colors.grey[300],
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -241,8 +222,10 @@ class MessageBubble extends StatelessWidget {
 
             return Image.memory(
               snapshot.data!,
+              width: imageWidth,
+              height: imageHeight,
               fit: BoxFit.cover,
-              gaplessPlayback: true, // Smooth image transitions
+              gaplessPlayback: true,
             );
           },
         ),
@@ -251,40 +234,38 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildVideoWidget(BuildContext context) {
+    const double videoWidth = 220;
+    const double videoHeight = 220;
     final thumbnailUrl = mediaThumbnail ?? mediaUrl;
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 280, maxHeight: 300),
+        width: videoWidth,
+        height: videoHeight,
+        color: Colors.grey[300],
         child: Stack(
           alignment: Alignment.center,
           children: [
             Image.network(
               thumbnailUrl!,
+              width: videoWidth,
+              height: videoHeight,
               fit: BoxFit.cover,
               loadingBuilder: (context, child, loadingProgress) {
                 if (loadingProgress == null) return child;
                 return Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  width: videoWidth,
+                  height: videoHeight,
+                  color: Colors.grey[300],
+                  child: const Center(child: CircularProgressIndicator()),
                 );
               },
               errorBuilder: (context, error, stackTrace) {
                 return Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Center(
-                    child: Icon(Icons.videocam, size: 48, color: Colors.grey),
-                  ),
+                  width: videoWidth,
+                  height: videoHeight,
+                  color: Colors.grey[300],
+                  child: const Center(child: Icon(Icons.videocam, size: 48, color: Colors.grey)),
                 );
               },
             ),
@@ -297,7 +278,7 @@ class MessageBubble extends StatelessWidget {
               child: const Icon(
                 Icons.play_arrow,
                 color: Colors.white,
-                size: 24,
+                size: 32,
               ),
             ),
           ],
