@@ -33,23 +33,45 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
+
+  # UI & Theming
   cupertino_icons: ^1.0.8
-  firebase_core: ^3.14.0
-  flutter_riverpod: ^2.6.1
-  google_fonts: ^6.2.1
-  firebase_auth: ^5.6.0
-  cloud_firestore: ^5.6.9
-  intl_phone_field: ^3.2.0
-  permission_handler: ^12.0.0+1
-  flutter_contacts: ^1.1.9+2
-  image_picker: ^1.1.2
-  firebase_storage: ^12.4.7
-  shared_preferences: ^2.5.3
-  rename: ^3.1.0
   lottie: ^3.3.1
   animate_do: ^4.2.0
-  flutter_image_compress: ^2.4.0
+  google_fonts: ^6.2.1
   flutter_launcher_icons: ^0.14.4
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Firebase Services
+  firebase_core: ^3.14.0
+  firebase_auth: ^5.6.0
+  cloud_firestore: ^5.6.9
+  firebase_storage: ^12.4.7
+
+  # Media & File Handling
+  image_picker: ^1.1.2
+  file_picker: ^10.3.1
+  image: ^4.5.4
+  flutter_image_compress: ^2.4.0
+
+  # Network & Caching
+  cached_network_image: ^3.4.1
+  http: ^1.5.0
+  crypto: ^3.0.6
+  path_provider: ^2.1.5
+
+  # Contact Services
+  permission_handler: ^12.0.0+1
+  flutter_contacts: ^1.1.9+2
+  intl_phone_field: ^3.2.0
+
+  # Gemini AI Integration
+  google_generative_ai: ^0.4.7
+  
+  shared_preferences: ^2.5.3
+  rename: ^3.1.0
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +100,7 @@ flutter:
     - assets/icons/google-icon.png
     - assets/lottie/chat_icon.json
     - assets/images/app_logo.jpg
+    - assets/images/virtualAssistant.png
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

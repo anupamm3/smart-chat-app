@@ -4,7 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
-import 'package:smart_chat_app/constants.dart';
+import 'package:smart_chat_app/features/profile/screens/group_profile_screen.dart';
+import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/features/auth/controller/auth_controller.dart';
 import 'package:smart_chat_app/features/groups/screens/group_chat_screen.dart';
 import 'package:smart_chat_app/features/groups/screens/group_contact_picker_screen.dart';
@@ -16,6 +17,7 @@ import 'package:smart_chat_app/models/contact_model.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/providers/theme_provider.dart';
 import 'package:smart_chat_app/features/settings/settings_screen.dart';
+import 'package:smart_chat_app/services/media_cache_service.dart';
 import 'features/auth/screens/phone_onboarding_screen.dart';
 import 'features/auth/screens/otp_verification_screen.dart';
 import 'features/home/screens/home_screen.dart';
@@ -27,6 +29,8 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    MediaCacheService();
     runApp(const ProviderScope(child: SmartChatApp()));
   } catch (e) {
     runApp(MaterialApp(
@@ -51,8 +55,15 @@ class SmartChatApp extends ConsumerWidget {
     ref.listen<AsyncValue<User?>>(
       authStateChangesProvider,
       (previous, next) {
-        ref.invalidate(chatControllerProvider);
-        ref.invalidate(chatMessagesProvider);
+        // Only invalidate if providers exist and user state actually changed
+        if (previous?.value?.uid != next.value?.uid) {
+          try {
+            ref.invalidate(chatControllerProvider);
+            ref.invalidate(chatMessagesProvider);
+          } catch (e) {
+            debugPrint('Provider invalidation error: $e');
+          }
+        }
       },
     );
     
@@ -156,28 +167,84 @@ class SmartChatApp extends ConsumerWidget {
         AppRoutes.otp: (context) => const OTPVerificationScreen(),
         AppRoutes.home: (context) => const HomeScreen(),
         AppRoutes.chat: (context) {
-          final user = ModalRoute.of(context)!.settings.arguments as UserModel;
-          return ChatScreen(receiver: user);
+          final arguments = ModalRoute.of(context)?.settings.arguments;
+          if (arguments == null || arguments is! UserModel) {
+            // Handle null or invalid arguments
+            return Scaffold(
+              appBar: AppBar(title: const Text('Error')),
+              body: const Center(
+                child: Text(
+                  'Invalid user data. Please try again.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            );
+          }
+          return ChatScreen(receiver: arguments);
         },
         AppRoutes.newChat: (context) => const NewChatScreen(),
-        AppRoutes.profileTab: (context) {
-          final user = ModalRoute.of(context)!.settings.arguments as UserModel;
-          return UserProfileScreen(user: user);
+        AppRoutes.userProfile: (context) {
+          final arguments = ModalRoute.of(context)?.settings.arguments;
+          if (arguments == null || arguments is! UserModel) {
+            // Handle null or invalid arguments
+            return Scaffold(
+              appBar: AppBar(title: const Text('Error')),
+              body: const Center(
+                child: Text(
+                  'Invalid user data. Please try again.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            );
+          }
+          return UserProfileScreen(user: arguments);
+        },
+        AppRoutes.groupProfile: (context) {
+          final arguments = ModalRoute.of(context)?.settings.arguments;
+          if (arguments == null || arguments is! String) {
+            // Handle null or invalid arguments
+            return Scaffold(
+              appBar: AppBar(title: const Text('Error')),
+              body: const Center(
+                child: Text(
+                  'Invalid user data. Please try again.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            );
+          }
+          return GroupProfileScreen(groupId: arguments);
         },
         AppRoutes.groupsTab: (context) => const GroupsTab(),
         AppRoutes.groupChat: (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          final arguments = ModalRoute.of(context)?.settings.arguments;
+          if (arguments == null || arguments is! Map<String, dynamic>) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Error')),
+              body: const Center(
+                child: Text('Invalid group data. Please try again.'),
+              ),
+            );
+          }
           return GroupChatRoomScreen(
-            groupId: args['groupId'] as String,
-            groupName: args['groupName'] as String? ?? '',
-            groupPhotoUrl: args['groupPhotoUrl'] as String?,
+            groupId: arguments['groupId'] as String? ?? '',
+            groupName: arguments['groupName'] as String? ?? '',
+            groupPhotoUrl: arguments['groupPhotoUrl'] as String?,
           );
         },
         AppRoutes.groupContactPicker: (context) {
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-          final contacts = args['contacts'] as List<ContactModel>;
+          final arguments = ModalRoute.of(context)?.settings.arguments;
+          if (arguments == null || arguments is! Map<String, dynamic>) {
+            return Scaffold(
+              appBar: AppBar(title: const Text('Error')),
+              body: const Center(
+                child: Text('Invalid contact data. Please try again.'),
+              ),
+            );
+          }
+          final contacts = arguments['contacts'] as List<ContactModel>? ?? [];
           return GroupContactPickerScreen(contacts: contacts);
-        },   
+        }, 
         AppRoutes.settings: (context) => const SettingsScreen()   
       },
     );
@@ -226,7 +293,6 @@ class BrandedSplashScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            // Animated loader (can be replaced with Lottie or custom animation)
             CircularProgressIndicator(
               color: colorScheme.onSurface,
               strokeWidth: 3,

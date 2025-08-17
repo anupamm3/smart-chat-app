@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:lottie/lottie.dart';
-import 'package:smart_chat_app/constants.dart';
+import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/features/auth/controller/auth_controller.dart';
 import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 

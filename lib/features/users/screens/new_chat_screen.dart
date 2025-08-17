@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:smart_chat_app/constants.dart';
+import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/services/contact_services.dart';
 import 'package:smart_chat_app/utils/contact_utils.dart';

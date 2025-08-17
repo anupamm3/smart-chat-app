@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:smart_chat_app/models/user_model.dart';
@@ -132,13 +133,13 @@ Future<List<MatchedContact>> fetchMatchedContacts(String? currentUserId) async {
     // Request permission
     final permission = await Permission.contacts.request();
     if (!permission.isGranted) {
-      print('Contacts permission not granted');
+      debugPrint('Contacts permission not granted');
       return [];
     }
 
     // Fetch contacts
     final contacts = await FlutterContacts.getContacts(withProperties: true);
-    print('Found ${contacts.length} device contacts');
+    debugPrint('Found ${contacts.length} device contacts');
     
     // Build contact mapping using local phone numbers as keys
     final Map<String, String> contactNameByLocalPhone = {};
@@ -163,7 +164,7 @@ Future<List<MatchedContact>> fetchMatchedContacts(String? currentUserId) async {
       }
     }
 
-    print('Processed contact phone mappings: ${contactNameByLocalPhone.length}');
+    debugPrint('Processed contact phone mappings: ${contactNameByLocalPhone.length}');
 
     // Fetch all users from Firestore
     final usersSnap = await FirebaseFirestore.instance
@@ -171,7 +172,7 @@ Future<List<MatchedContact>> fetchMatchedContacts(String? currentUserId) async {
         .where('uid', isNotEqualTo: currentUserId)
         .get();
     
-    print('Found ${usersSnap.docs.length} users in Firestore');
+    debugPrint('Found ${usersSnap.docs.length} users in Firestore');
 
     final List<MatchedContact> matched = [];
     
@@ -221,16 +222,16 @@ Future<List<MatchedContact>> fetchMatchedContacts(String? currentUserId) async {
             contactName: foundContactName,
             localPhoneNumber: userLocalPhone,
           ));
-          print('Matched: ${user.name} (${foundContactName ?? 'No contact name'}) - $userLocalPhone');
+          debugPrint('Matched: ${user.name} (${foundContactName ?? 'No contact name'}) - $userLocalPhone');
         }
         
       } catch (e) {
-        print('Error processing user ${doc.id}: $e');
+        debugPrint('Error processing user ${doc.id}: $e');
         continue;
       }
     }
 
-    print('Total matched contacts: ${matched.length}');
+    debugPrint('Total matched contacts: ${matched.length}');
     
     // Sort by contact name, then by user name
     matched.sort((a, b) {
@@ -242,7 +243,7 @@ Future<List<MatchedContact>> fetchMatchedContacts(String? currentUserId) async {
     return matched;
     
   } catch (e) {
-    print('Error in fetchMatchedContacts: $e');
+    debugPrint('Error in fetchMatchedContacts: $e');
     return [];
   }
 }
@@ -261,7 +262,7 @@ Future<String?> getContactNameByPhone(String phoneNumber, String currentUserId) 
     
     return null;
   } catch (e) {
-    print('Error getting contact name: $e');
+    debugPrint('Error getting contact name: $e');
     return null;
   }
 }
@@ -272,7 +273,7 @@ Future<bool> isPhoneInContacts(String phoneNumber, String currentUserId) async {
     final contactName = await getContactNameByPhone(phoneNumber, currentUserId);
     return contactName != null;
   } catch (e) {
-    print('Error checking if phone in contacts: $e');
+    debugPrint('Error checking if phone in contacts: $e');
     return false;
   }
 }

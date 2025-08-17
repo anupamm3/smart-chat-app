@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:smart_chat_app/constants.dart';
+import 'package:smart_chat_app/router.dart';
 
 class GroupSearchDelegate extends SearchDelegate<String> {
   final AsyncValue<List<dynamic>> groupsAsync;
