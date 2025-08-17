@@ -695,17 +695,21 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin {
             // AI badge for chatbot
             if (isChatbot)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                 decoration: BoxDecoration(
-                  color: colorScheme.secondaryContainer,
-                  borderRadius: BorderRadius.circular(8),
+                  color: colorScheme.primary.withAlpha((0.2 * 255).toInt()), // More subtle
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: colorScheme.primary.withAlpha((0.3 * 255).toInt()),
+                    width: 0.5,
+                  ),
                 ),
                 child: Text(
                   'AI',
                   style: GoogleFonts.poppins(
                     fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.secondary,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.primary,
                   ),
                 ),
               ),
