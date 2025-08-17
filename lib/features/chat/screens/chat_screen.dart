@@ -627,9 +627,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
                             width: 4,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: colorScheme.secondary.withOpacity(
-                                0.4 + (0.6 * _typingAnimation.value),
-                              ),
+                              color: colorScheme.secondary.withValues(alpha: 0.4 + (0.6 * _typingAnimation.value)),
                               shape: BoxShape.circle,
                             ),
                           );
@@ -808,7 +806,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
                             Icon(
                               Icons.smart_toy_rounded,
                               size: 64,
-                              color: colorScheme.secondary.withOpacity(0.5),
+                              color: colorScheme.secondary.withAlpha((0.5 * 255).toInt()),
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -823,7 +821,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
                             Text(
                               'Ask me anything! I can help with questions,\ncreative writing, problem solving, and more.',
                               style: GoogleFonts.poppins(
-                                color: colorScheme.onSurface.withOpacity(0.7),
+                                color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
                                 fontSize: 14,
                               ),
                               textAlign: TextAlign.center,

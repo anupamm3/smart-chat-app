@@ -76,7 +76,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         setState(() {});
       }
     } catch (e) {
-      print('Error loading contacts: $e');
+      if (mounted) {
+        showError(context, 'Failed to load contacts: ${e.toString()}');
+      }
     }
   }
 
@@ -102,7 +104,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                      Theme.of(context).colorScheme.secondary.withAlpha((0.1 * 255).toInt()),
                       Theme.of(context).colorScheme.secondaryContainer,
                     ],
                   ),
@@ -128,7 +130,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Theme.of(context).colorScheme.secondary.withOpacity(0.3),
+                    color: Theme.of(context).colorScheme.secondary.withAlpha(77),
                     width: 2,
                   ),
                 ),
@@ -394,7 +396,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         await _loadContacts();
       }
     } catch (e) {
-      print('Error refreshing profile: $e');
+      debugPrint('Error refreshing profile: $e');
       if (!mounted) return;
       showError(context, 'Failed to refresh profile');
     }

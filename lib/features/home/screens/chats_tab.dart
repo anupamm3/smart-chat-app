@@ -7,6 +7,7 @@ import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/models/chatbot_model.dart';
 import 'package:smart_chat_app/services/contact_services.dart';
+import 'package:smart_chat_app/utils/snackbar_utils.dart';
 import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 import 'package:smart_chat_app/utils/contact_utils.dart';
 
@@ -80,12 +81,13 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin {
     } catch (e) {
       if (mounted) {
         setState(() => _contactsLoaded = true);
+        showError(context, 'Failed to load contacts');
       }
     }
   }
 
   Future<void> _handleRefresh() async {
-    if (_isRefreshing) return; // Prevent multiple simultaneous refreshes
+    if (_isRefreshing) return;
     
     setState(() => _isRefreshing = true);
     
@@ -96,64 +98,18 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin {
       // Reload contacts and reinitialize stream
       await Future.wait([
         _loadContacts(),
-        Future.delayed(const Duration(milliseconds: 500)), // Minimum refresh time for UX
+        Future.delayed(const Duration(milliseconds: 500)),
       ]);
       
       // Reinitialize the chat stream to force refresh
       _initializeChatStream();
       
-      // Show success feedback
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.refresh, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  'Chats refreshed',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
+        showSuccess(context, 'Chats refreshed successfully');
       }
     } catch (e) {
-      // Show error feedback
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.error_outline, color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Text(
-                  'Failed to refresh chats',
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
+        showError(context, 'Failed to refresh chats');
       }
     } finally {
       if (mounted) {
@@ -173,12 +129,7 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to open chatbot. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        showError(context, 'Failed to open chatbot. Please try again.');
       }
     }
   }
