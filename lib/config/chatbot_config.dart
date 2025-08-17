@@ -22,7 +22,7 @@ class ChatbotConfig {
   // Rate Limiting Configuration
   static const int maxRequestsPerMinute = 15;
   static const int maxRequestsPerDay = 1500;
-  static const Duration requestCooldown = Duration(seconds: 4);
+  static const Duration requestCooldown = Duration(seconds: 2);
   
   // UI Configuration
   static const int typingDelayBaseMs = 500;
