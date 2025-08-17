@@ -4,7 +4,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lottie/lottie.dart';
-import 'package:smart_chat_app/constants.dart';
+import 'package:smart_chat_app/features/profile/screens/group_profile_screen.dart';
+import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/features/auth/controller/auth_controller.dart';
 import 'package:smart_chat_app/features/groups/screens/group_chat_screen.dart';
 import 'package:smart_chat_app/features/groups/screens/group_contact_picker_screen.dart';
@@ -182,7 +183,7 @@ class SmartChatApp extends ConsumerWidget {
           return ChatScreen(receiver: arguments);
         },
         AppRoutes.newChat: (context) => const NewChatScreen(),
-        AppRoutes.profileTab: (context) {
+        AppRoutes.userProfile: (context) {
           final arguments = ModalRoute.of(context)?.settings.arguments;
           if (arguments == null || arguments is! UserModel) {
             // Handle null or invalid arguments
@@ -197,6 +198,22 @@ class SmartChatApp extends ConsumerWidget {
             );
           }
           return UserProfileScreen(user: arguments);
+        },
+        AppRoutes.groupProfile: (context) {
+          final arguments = ModalRoute.of(context)?.settings.arguments;
+          if (arguments == null || arguments is! String) {
+            // Handle null or invalid arguments
+            return Scaffold(
+              appBar: AppBar(title: const Text('Error')),
+              body: const Center(
+                child: Text(
+                  'Invalid user data. Please try again.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            );
+          }
+          return GroupProfileScreen(groupId: arguments);
         },
         AppRoutes.groupsTab: (context) => const GroupsTab(),
         AppRoutes.groupChat: (context) {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:smart_chat_app/constants.dart';
+import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/features/home/screens/chats_tab.dart';
 import 'package:smart_chat_app/features/home/screens/groups_tab.dart';
 import 'package:smart_chat_app/features/home/screens/profile_tab.dart';

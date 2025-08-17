@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:smart_chat_app/constants.dart';
+import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/features/chat/controller/chat_controller.dart';
 import 'package:smart_chat_app/models/chatbot_model.dart';
 import 'package:smart_chat_app/models/user_model.dart';
@@ -660,7 +660,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
               onTap: () {
                 Navigator.pushNamed(
                   context,
-                  AppRoutes.profileTab,
+                  AppRoutes.userProfile,
                   arguments: widget.receiver,
                 );
               },

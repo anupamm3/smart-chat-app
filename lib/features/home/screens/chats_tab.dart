@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:smart_chat_app/constants.dart';
+import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/models/chatbot_model.dart';
 import 'package:smart_chat_app/services/contact_services.dart';

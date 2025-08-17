@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:smart_chat_app/constants.dart';
+import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/features/groups/controller/group_chat_controller.dart';
 import 'package:smart_chat_app/models/contact_model.dart';
 import 'package:smart_chat_app/utils/contact_utils.dart';
