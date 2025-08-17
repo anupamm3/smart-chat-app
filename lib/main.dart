@@ -11,7 +11,7 @@ import 'package:smart_chat_app/features/groups/screens/group_chat_screen.dart';
 import 'package:smart_chat_app/features/groups/screens/group_contact_picker_screen.dart';
 import 'package:smart_chat_app/features/home/screens/groups_tab.dart';
 import 'package:smart_chat_app/features/profile/screens/user_profile_screen.dart';
-import 'package:smart_chat_app/features/users/screens/new_chat_screen.dart';
+import 'package:smart_chat_app/features/chat/screens/new_chat_screen.dart';
 import 'package:smart_chat_app/firebase_options.dart';
 import 'package:smart_chat_app/models/contact_model.dart';
 import 'package:smart_chat_app/models/user_model.dart';
