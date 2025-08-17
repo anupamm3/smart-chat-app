@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/constants.dart';
 import 'package:smart_chat_app/models/user_model.dart';
-import 'package:smart_chat_app/models/chatbot_model.dart'; // Add this import
+import 'package:smart_chat_app/models/chatbot_model.dart';
 import 'package:smart_chat_app/services/contact_services.dart';
 import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 import 'package:smart_chat_app/utils/contact_utils.dart';
@@ -18,25 +18,29 @@ class ChatsTab extends StatefulWidget {
   State<ChatsTab> createState() => _ChatsTabState();
 }
 
-class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // Add TickerProviderStateMixin
+class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   final ContactService _contactService = ContactService();
   
-  // Add these new variables for contact synchronization
+  // Variables for contact synchronization
   Map<String, String> _contactMapping = {};
   bool _contactsLoaded = false;
 
-  // NEW: Animation controllers for FABs
+  // Animation controllers for FABs
   late AnimationController _fabAnimationController;
   late Animation<double> _fabAnimation;
+
+  Stream<QuerySnapshot>? _chatStream;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
     super.initState();
     _loadContacts();
-    
-    // NEW: Initialize animation controller
+    _initializeChatStream();
+
+    // Initialize animation controller
     _fabAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -55,33 +59,119 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
   @override
   void dispose() {
     _searchController.dispose();
-    _fabAnimationController.dispose(); // NEW: Dispose animation controller
+    _fabAnimationController.dispose();
     super.dispose();
+  }
+
+  void _initializeChatStream() {
+    _chatStream = FirebaseFirestore.instance
+        .collection('chats')
+        .where('participants', arrayContains: widget.user.uid)
+        .orderBy('lastMessageTime', descending: true)
+        .snapshots();
   }
 
   Future<void> _loadContacts() async {
     try {
       _contactMapping = await _contactService.getContactMapping(widget.user.uid);
-      setState(() => _contactsLoaded = true);
+      if (mounted) {
+        setState(() => _contactsLoaded = true);
+      }
     } catch (e) {
-      setState(() => _contactsLoaded = true);
+      if (mounted) {
+        setState(() => _contactsLoaded = true);
+      }
     }
   }
 
-  // NEW: Navigate to chatbot chat
+  Future<void> _handleRefresh() async {
+    if (_isRefreshing) return; // Prevent multiple simultaneous refreshes
+    
+    setState(() => _isRefreshing = true);
+    
+    try {
+      // Show haptic feedback
+      HapticFeedback.mediumImpact();
+      
+      // Reload contacts and reinitialize stream
+      await Future.wait([
+        _loadContacts(),
+        Future.delayed(const Duration(milliseconds: 500)), // Minimum refresh time for UX
+      ]);
+      
+      // Reinitialize the chat stream to force refresh
+      _initializeChatStream();
+      
+      // Show success feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.refresh, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Chats refreshed',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Show error feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Failed to refresh chats',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshing = false);
+      }
+    }
+  }
+
   void _navigateToChatbot() async {
     try {
-      // Create chatbot user instance
       final chatbotUser = ChatbotModel.getChatbotUser().toUserModel();
       
-      // Navigate to chat screen with chatbot
       Navigator.pushNamed(
         context,
         AppRoutes.chat,
         arguments: chatbotUser,
       );
     } catch (e) {
-      // Show error if navigation fails
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -93,7 +183,7 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
     }
   }
 
-  // Simplified methods using ContactService
+  // methods using ContactService
   String _getDisplayName(String phoneNumber, String registeredName) {
     return _contactService.getDisplayName(phoneNumber, registeredName, _contactMapping);
   }
@@ -111,11 +201,6 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final chatQuery = FirebaseFirestore.instance
-        .collection('chats')
-        .where('participants', arrayContains: widget.user.uid)
-        .orderBy('lastMessageTime', descending: true);
 
     return GradientScaffold(
       extendBodyBehindAppBar: true,
@@ -179,39 +264,38 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
           ),
         ),
       ),
-      // NEW: Enhanced FloatingActionButton with Stack for multiple FABs
       floatingActionButton: AnimatedBuilder(
         animation: _fabAnimation,
         builder: (context, child) {
           return Stack(
             children: [
-              // NEW: Chatbot FAB positioned above the main FAB
+              // Chatbot FAB positioned above the main FAB
               Positioned(
-                bottom: 80, // 80px above the main FAB
+                bottom: 65,
                 right: 0,
                 child: Transform.scale(
                   scale: _fabAnimation.value,
                   child: FloatingActionButton(
-                    heroTag: "chatbot_fab", // Unique hero tag
-                    backgroundColor: colorScheme.secondary,
-                    foregroundColor: colorScheme.onSecondary,
+                    heroTag: "chatbot_fab",
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
                     onPressed: _navigateToChatbot,
                     tooltip: 'Chat with AI Assistant',
                     child: const Icon(
-                      Icons.smart_toy_rounded, // Robot/AI icon
-                      size: 28,
+                      Icons.smart_toy_rounded,
+                      size: 26,
                     ),
                   ),
                 ),
               ),
-              // EXISTING: Original New Chat FAB (unchanged)
+              // New Chat FAB
               Positioned(
                 bottom: 0,
                 right: 0,
                 child: Transform.scale(
                   scale: _fabAnimation.value,
                   child: FloatingActionButton.extended(
-                    heroTag: "new_chat_fab", // Unique hero tag
+                    heroTag: "new_chat_fab",
                     backgroundColor: colorScheme.primary,
                     foregroundColor: colorScheme.onPrimary,
                     icon: const Icon(Icons.add_comment_rounded),
@@ -232,94 +316,119 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: !_contactsLoaded // Add loading state check
+          child: !_contactsLoaded
               ? const Center(child: CircularProgressIndicator())
-              : StreamBuilder<QuerySnapshot>(
-                  stream: chatQuery.snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                      return _buildEmptyState(colorScheme, isDark); // NEW: Enhanced empty state
-                    }
-          
-                    return FutureBuilder<List<Map<String, dynamic>>>(
-                      future: _buildChatListWithUserData(snapshot.data!.docs),
-                      builder: (context, chatListSnapshot) {
-                        if (chatListSnapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-          
-                        if (!chatListSnapshot.hasData || chatListSnapshot.data!.isEmpty) {
-                          return _buildEmptyState(colorScheme, isDark); // NEW: Enhanced empty state
-                        }
-          
-                        // Updated filtering logic to include local phone numbers
-                        final filteredChats = chatListSnapshot.data!.where((chatData) {
-                          if (_searchQuery.isEmpty) return true;
+              : RefreshIndicator(
+                  onRefresh: _handleRefresh,
+                  color: colorScheme.primary,
+                  backgroundColor: colorScheme.surface,
+                  displacement: 40,
+                  strokeWidth: 2.5,
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: _chatStream,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.6,
+                              child: _buildEmptyState(colorScheme, isDark),
+                            ),
+                          ],
+                        );
+                      }
                           
-                          final userName = (chatData['userName'] as String).toLowerCase();
-                          final userPhone = (chatData['userPhone'] as String).toLowerCase();
-                          final localPhone = (chatData['localPhone'] as String).toLowerCase();
+                      return FutureBuilder<List<Map<String, dynamic>>>(
+                        future: _buildChatListWithUserData(snapshot.data!.docs),
+                        builder: (context, chatListSnapshot) {
+                          if (chatListSnapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
                           
-                          return userName.contains(_searchQuery) || userPhone.contains(_searchQuery) || localPhone.contains(_searchQuery);
-                        }).toList();
-          
-                        if (filteredChats.isEmpty) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                          if (!chatListSnapshot.hasData || chatListSnapshot.data!.isEmpty) {
+                            return ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
                               children: [
-                                Icon(
-                                  Icons.search_off_rounded,
-                                  size: 64,
-                                  color: colorScheme.onSurface.withAlpha((0.4 * 255).toInt()),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No chats found for "$_searchQuery"',
-                                  style: GoogleFonts.poppins(
-                                    color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
-                                    fontSize: 16,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 8),
-                                TextButton.icon(
-                                  onPressed: _navigateToChatbot,
-                                  icon: Icon(Icons.smart_toy_rounded, color: colorScheme.secondary),
-                                  label: Text(
-                                    'Try chatting with AI Assistant',
-                                    style: GoogleFonts.poppins(color: colorScheme.secondary),
-                                  ),
+                                SizedBox(
+                                  height: MediaQuery.of(context).size.height * 0.6,
+                                  child: _buildEmptyState(colorScheme, isDark),
                                 ),
                               ],
+                            );
+                          }
+                          
+                          // filtering logic to include local phone numbers
+                          final filteredChats = chatListSnapshot.data!.where((chatData) {
+                            if (_searchQuery.isEmpty) return true;
+                            
+                            final userName = (chatData['userName'] as String).toLowerCase();
+                            final userPhone = (chatData['userPhone'] as String).toLowerCase();
+                            final localPhone = (chatData['localPhone'] as String).toLowerCase();
+                            
+                            return userName.contains(_searchQuery) || userPhone.contains(_searchQuery) || localPhone.contains(_searchQuery);
+                          }).toList();
+                          
+                          if (filteredChats.isEmpty) {
+                            return Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.search_off_rounded,
+                                    size: 64,
+                                    color: colorScheme.onSurface.withAlpha((0.4 * 255).toInt()),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No chats found for "$_searchQuery"',
+                                    style: GoogleFonts.poppins(
+                                      color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
+                                      fontSize: 16,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  TextButton.icon(
+                                    onPressed: _navigateToChatbot,
+                                    icon: Icon(Icons.smart_toy_rounded, color: colorScheme.secondary),
+                                    label: Text(
+                                      'Try chatting with AI Assistant',
+                                      style: GoogleFonts.poppins(color: colorScheme.secondary),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          
+                          return ListView.separated(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            cacheExtent: 200,
+                            itemCount: filteredChats.length,
+                            separatorBuilder: (_, __) => Divider(
+                              color: colorScheme.outline.withAlpha((0.08 * 255).toInt()),
+                              height: 0,
                             ),
+                            itemBuilder: (context, index) {
+                              final chatData = filteredChats[index];
+                              return _buildChatListTile(context, chatData, colorScheme, isDark);
+                            },
                           );
-                        }
-          
-                        return ListView.separated(
-                          itemCount: filteredChats.length,
-                          separatorBuilder: (_, __) => Divider(
-                            color: colorScheme.outline.withAlpha((0.08 * 255).toInt()),
-                            height: 0,
-                          ),
-                          itemBuilder: (context, index) {
-                            final chatData = filteredChats[index];
-                            return _buildChatListTile(context, chatData, colorScheme, isDark);
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
+                        },
+                      );
+                    },
+                  ),
+              ),
         ),
       ),
     );
   }
 
-  // NEW: Enhanced empty state with chatbot suggestion
+  // empty state with chatbot suggestion
   Widget _buildEmptyState(ColorScheme colorScheme, bool isDark) {
     return Center(
       child: Column(
@@ -446,7 +555,18 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
     );
   }
 
-  // Updated method with contact name synchronization
+  Widget _buildChatbotAvatar(ColorScheme colorScheme) {
+  return CircleAvatar(
+    backgroundColor: colorScheme.primaryContainer, // Same as user avatars
+    child: Icon(
+      Icons.psychology_rounded, // 🤖 Using brain icon for AI
+      color: colorScheme.primary, // Same color scheme as user avatars
+      size: 26, // Same size as user avatar icons
+    ),
+  );
+}
+
+  // contact name synchronization
   Future<List<Map<String, dynamic>>> _buildChatListWithUserData(List<QueryDocumentSnapshot> chats) async {
     final List<Map<String, dynamic>> chatList = [];
 
@@ -463,7 +583,7 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
           continue;
         }
 
-        // NEW: Special handling for chatbot
+        // Special handling for chatbot
         if (ChatbotModel.isChatbotUser(otherUserId)) {
           final chatbot = ChatbotModel.getChatbotUser();
           chatList.add({
@@ -476,7 +596,7 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
             'registeredName': chatbot.name,
             'isContactName': false,
             'userExists': true,
-            'isChatbot': true, // NEW: Mark as chatbot
+            'isChatbot': true,
           });
           continue;
         }
@@ -521,7 +641,7 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
           'registeredName': registeredName,
           'isContactName': _hasContactName(userPhone),
           'userExists': userExists,
-          'isChatbot': false, // Regular user
+          'isChatbot': false,
         });
       } catch (e) {
         continue;
@@ -537,7 +657,7 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
     final userPhone = chatData['userPhone'] as String;
     final userPic = chatData['userPic'] as String;
     final userExists = chatData['userExists'] as bool? ?? true;
-    final isChatbot = chatData['isChatbot'] as bool? ?? false; // NEW: Check if chatbot
+    final isChatbot = chatData['isChatbot'] as bool? ?? false;
 
     final lastMessage = data['lastMessage']?.toString().trim() ?? '';
     final displayMessage = lastMessage.isEmpty ? 'Tap to start conversation' : lastMessage;
@@ -552,14 +672,7 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
       color: colorScheme.surface.withAlpha(isDark ? (0.55 * 255).toInt() : (0.85 * 255).toInt()),
       child: ListTile(
         leading: isChatbot 
-            ? CircleAvatar(
-                backgroundColor: colorScheme.secondaryContainer,
-                child: Icon(
-                  Icons.smart_toy_rounded,
-                  color: colorScheme.secondary,
-                  size: 28,
-                ),
-              )
+            ? _buildChatbotAvatar(colorScheme)
             : _buildAvatar(
                 userPic: userPic,
                 displayName: userName,
@@ -573,13 +686,13 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
                 userName,
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w600,
-                  color: isChatbot ? colorScheme.secondary : colorScheme.onSurface, // NEW: Special color for chatbot
+                  color: colorScheme.onSurface,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            // NEW: Show AI badge for chatbot
+            // AI badge for chatbot
             if (isChatbot)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -640,13 +753,13 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
                 margin: const EdgeInsets.only(top: 4),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isChatbot ? colorScheme.secondary : colorScheme.primary, // NEW: Different color for chatbot unread
+                  color: colorScheme.primary, 
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   unreadCount,
                   style: GoogleFonts.poppins(
-                    color: isChatbot ? colorScheme.onSecondary : colorScheme.onPrimary,
+                    color: colorScheme.onPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -655,7 +768,7 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin { // 
           ],
         ),
         onTap: () async {
-          // NEW: Handle chatbot navigation
+          // chatbot navigation
           if (isChatbot) {
             _navigateToChatbot();
             return;
