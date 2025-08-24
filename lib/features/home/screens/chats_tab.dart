@@ -202,11 +202,32 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin {
                         )
                       : null,
                   filled: true,
-                  fillColor: colorScheme.surface.withAlpha(isDark ? (0.45 * 255).toInt() : (0.65 * 255).toInt()),
+                  fillColor: colorScheme.surfaceBright.withAlpha((0.45 * 255).toInt()),
                   contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+                    borderSide: BorderSide(
+                      color: isDark
+                          ? colorScheme.outline.withAlpha(120)
+                          : colorScheme.primary.withAlpha(120),
+                      width: 1.5,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: isDark
+                          ? colorScheme.outline.withAlpha(120)
+                          : colorScheme.primary.withAlpha(120),
+                      width: 1.5,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
                   ),
                 ),
                 style: GoogleFonts.poppins(),
