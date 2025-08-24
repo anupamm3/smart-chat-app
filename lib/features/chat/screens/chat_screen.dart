@@ -687,6 +687,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
     );
   }
 
+  String formatChatDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final messageDay = DateTime(date.year, date.month, date.day);
+
+    if (messageDay == today) {
+      return "Today";
+    } else if (messageDay == yesterday) {
+      return "Yesterday";
+    } else {
+      return "${date.day}/${date.month}/${date.year}";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -917,16 +932,74 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
                             final msg = messages[index];
                             final isMe = msg.senderId == chatController.currentUser.uid;
                             final time = msg.timestamp;
-                            return MessageBubble(
-                              text: msg.text,
-                              isMe: isMe,
-                              timestamp: time,
-                              status: isMe ? msg.status : null,
-                              mediaUrl: msg.mediaUrl,
-                              mediaType: msg.mediaType,
-                              fileName: msg.fileName,
-                              fileSize: msg.fileSize,
-                              mediaThumbnail: msg.mediaThumbnail,
+
+                            Widget? dateSeparator;
+                            if (index == 0 ||
+                                (messages[index - 1].timestamp != null &&
+                                time != null &&
+                                (messages[index - 1].timestamp!.day != time.day ||
+                                  messages[index - 1].timestamp!.month != time.month ||
+                                  messages[index - 1].timestamp!.year != time.year))) {
+                              final formattedDate = time != null ? formatChatDate(time) : '';
+                              dateSeparator = Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: MediaQuery.of(context).size.width * 0.10,
+                                    ),
+                                    Expanded(
+                                      child: Container(
+                                        margin: const EdgeInsets.only(right: 8),
+                                        height: 1,
+                                        color: Theme.of(context).colorScheme.outline.withAlpha(80),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Text(
+                                        formattedDate,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Container(
+                                        margin: const EdgeInsets.only(left: 8),
+                                        height: 1,
+                                        color: Theme.of(context).colorScheme.outline.withAlpha(80),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: MediaQuery.of(context).size.width * 0.10,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (dateSeparator != null) dateSeparator,
+                                MessageBubble(
+                                  text: msg.text,
+                                  isMe: isMe,
+                                  timestamp: time,
+                                  status: isMe ? msg.status : null,
+                                  mediaUrl: msg.mediaUrl,
+                                  mediaType: msg.mediaType,
+                                  fileName: msg.fileName,
+                                  fileSize: msg.fileSize,
+                                  mediaThumbnail: msg.mediaThumbnail,
+                                ),
+                              ],
                             );
                           },
                         ),
