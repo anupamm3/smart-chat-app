@@ -358,8 +358,7 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
                     .collection('groups')
                     .doc(widget.groupId)
                     .collection('messages')
-                    .orderBy('scheduledTime', descending: false)
-                    .orderBy('timestamp', descending: false)
+                    .orderBy('sentAt', descending: false)
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -400,11 +399,21 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
                         status = MessageStatus.sent;
                       }
 
-                      return MessageBubble(
-                        text: msg['text'] ?? '',
-                        isMe: isMe,
-                        timestamp: timestamp,
-                        status: isMe ? status : null,
+                      return FutureBuilder<DocumentSnapshot>(
+                        future: FirebaseFirestore.instance.collection('users').doc(msg['senderId']).get(),
+                        builder: (context, userSnapshot) {
+                          String? senderName;
+                          if (userSnapshot.hasData && userSnapshot.data != null) {
+                            senderName = userSnapshot.data!['name'] ?? 'Unknown';
+                          }
+                          return MessageBubble(
+                            text: msg['text'] ?? '',
+                            isMe: isMe,
+                            timestamp: timestamp,
+                            status: isMe ? status : null,
+                            senderName: isMe ? null : senderName,
+                          );
+                        },
                       );
                     },
                   );
