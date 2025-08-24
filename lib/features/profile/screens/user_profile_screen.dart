@@ -168,9 +168,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('profile_pictures')
-          .child('$userId.jpg');
+          .child(userId)
+          .child('profile.jpg');
 
       // Upload file
+      await storageRef.putFile(imageFile);
       final downloadUrl = await storageRef.getDownloadURL();
 
       // Update Firestore user document
@@ -243,7 +245,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('profile_pictures')
-          .child('$userId.jpg');
+          .child(userId)
+          .child('profile.jpg');
       await storageRef.delete().catchError((_) {});
 
       // Remove from Firestore
