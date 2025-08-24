@@ -17,6 +17,7 @@ class SettingsScreen extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
 
     return GradientScaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -37,7 +38,19 @@ class SettingsScreen extends ConsumerWidget {
           child: Column(
             children: [
               Card(
-                color: colorScheme.surface.withAlpha(isDark ? (0.55 * 255).toInt() : (0.85 * 255).toInt()),
+                elevation: 3,
+                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: colorScheme.outline.withAlpha(isDark ? (0.18 * 255).toInt() : (0.10 * 255).toInt()),
+                    width: 1,
+                  ),
+                ),
+                color: isDark
+                  ? colorScheme.surfaceContainerLow.withAlpha((0.9 * 255).toInt())
+                  : colorScheme.surfaceContainerLow.withAlpha((0.95 * 255).toInt()),
+                shadowColor: colorScheme.primary.withAlpha((0.15 * 255).toInt()),
                 child: ListTile(
                   leading: Icon(Icons.palette, color: colorScheme.primary),
                   title: Text(
@@ -53,33 +66,69 @@ class SettingsScreen extends ConsumerWidget {
                       color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
                     ),
                   ),
-                  trailing: DropdownButton<ThemeMode>(
-                    value: themeMode,
-                    underline: const SizedBox(),
-                    items: [
-                      DropdownMenuItem(
-                        value: ThemeMode.system,
-                        child: Text('System', style: GoogleFonts.poppins()),
-                      ),
-                      DropdownMenuItem(
-                        value: ThemeMode.light,
-                        child: Text('Light', style: GoogleFonts.poppins()),
-                      ),
-                      DropdownMenuItem(
-                        value: ThemeMode.dark,
-                        child: Text('Dark', style: GoogleFonts.poppins()),
-                      ),
-                    ],
-                    onChanged: (mode) {
-                      if (mode != null) {
-                        ref.read(themeModeProvider.notifier).setThemeMode(mode);
-                      }
-                    },
-                  ),
+                  trailing: SizedBox(
+  width: 120,
+  child: DropdownButtonFormField<ThemeMode>(
+    value: themeMode,
+    decoration: InputDecoration(
+      filled: true,
+      fillColor: colorScheme.surface.withAlpha(isDark ? (0.8 * 255).toInt() : (0.95 * 255).toInt()),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: colorScheme.primary.withAlpha((0.3 * 255).toInt()),
+          width: 1,
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(
+          color: colorScheme.primary.withAlpha((0.3 * 255).toInt()),
+          width: 1,
+        ),
+      ),
+    ),
+    icon: Icon(Icons.arrow_drop_down_rounded, color: colorScheme.primary),
+    style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: colorScheme.onSurface),
+    dropdownColor: colorScheme.surface,
+    items: [
+      DropdownMenuItem(
+        value: ThemeMode.system,
+        child: Text('System', style: GoogleFonts.poppins()),
+      ),
+      DropdownMenuItem(
+        value: ThemeMode.light,
+        child: Text('Light', style: GoogleFonts.poppins()),
+      ),
+      DropdownMenuItem(
+        value: ThemeMode.dark,
+        child: Text('Dark', style: GoogleFonts.poppins()),
+      ),
+    ],
+    onChanged: (mode) {
+      if (mode != null) {
+        ref.read(themeModeProvider.notifier).setThemeMode(mode);
+      }
+    },
+  ),
+),
                 ),
               ),
-              const Divider(),
               Card(
+                elevation: 3,
+                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: colorScheme.outline.withAlpha(isDark ? (0.18 * 255).toInt() : (0.10 * 255).toInt()),
+                    width: 1,
+                  ),
+                ),
+                color: isDark
+                  ? colorScheme.surfaceContainerLow.withAlpha((0.9 * 255).toInt())
+                  : colorScheme.surfaceContainerLow.withAlpha((0.95 * 255).toInt()),
+                shadowColor: colorScheme.primary.withAlpha((0.15 * 255).toInt()),
                 child: ListTile(
                   leading: const Icon(Icons.logout, color: Colors.redAccent),
                   title: Text('Logout', style: GoogleFonts.poppins(color: Colors.redAccent)),
