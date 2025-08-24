@@ -255,6 +255,21 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
     _scrollController.dispose();
     super.dispose();
   }
+
+  String formatGroupChatDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final messageDay = DateTime(date.year, date.month, date.day);
+
+    if (messageDay == today) {
+      return "Today";
+    } else if (messageDay == yesterday) {
+      return "Yesterday";
+    } else {
+      return "${date.day}/${date.month}/${date.year}";
+    }
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -358,8 +373,7 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
                     .collection('groups')
                     .doc(widget.groupId)
                     .collection('messages')
-                    .orderBy('scheduledTime', descending: false)
-                    .orderBy('timestamp', descending: false)
+                    .orderBy('sentAt', descending: false)
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -394,17 +408,86 @@ class _GroupChatRoomScreenState extends State<GroupChatRoomScreen> {
                         }
                       }
 
+                      // Date separator logic
+                      Widget? dateSeparator;
+                      if (timestamp != null && (index == 0 ||
+                          (docs[index - 1].data() as Map<String, dynamic>)['sentAt'] != null &&
+                          ((docs[index - 1].data() as Map<String, dynamic>)['sentAt'] is Timestamp
+                            ? ((docs[index - 1].data() as Map<String, dynamic>)['sentAt'] as Timestamp).toDate()
+                            : (docs[index - 1].data() as Map<String, dynamic>)['sentAt'] as DateTime)
+                              .day != timestamp.day)) {
+                        final formattedDate = formatGroupChatDate(timestamp);
+                        dateSeparator = Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: MediaQuery.of(context).size.width * 0.20,
+                              ),
+                              Expanded(
+                                child: Container(
+                                  margin: const EdgeInsets.only(right: 8),
+                                  height: 1,
+                                  color: Theme.of(context).colorScheme.outline.withAlpha(80),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Text(
+                                  formattedDate,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 13,
+                                    color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  height: 1,
+                                  color: Theme.of(context).colorScheme.outline.withAlpha(80),
+                                ),
+                              ),
+                              SizedBox(
+                                width: MediaQuery.of(context).size.width * 0.20,
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
                       // For group chat, you may not have delivery/read status, so just show sent tick
                       MessageStatus? status;
                       if (isMe) {
                         status = MessageStatus.sent;
                       }
 
-                      return MessageBubble(
-                        text: msg['text'] ?? '',
-                        isMe: isMe,
-                        timestamp: timestamp,
-                        status: isMe ? status : null,
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (dateSeparator != null) dateSeparator,
+                          FutureBuilder<DocumentSnapshot>(
+                            future: FirebaseFirestore.instance.collection('users').doc(msg['senderId']).get(),
+                            builder: (context, userSnapshot) {
+                              String? senderName;
+                              if (userSnapshot.hasData && userSnapshot.data != null) {
+                                senderName = userSnapshot.data!['name'] ?? 'Unknown';
+                              }
+                              return MessageBubble(
+                                text: msg['text'] ?? '',
+                                isMe: isMe,
+                                timestamp: timestamp,
+                                status: isMe ? status : null,
+                                senderName: isMe ? null : senderName,
+                              );
+                            },
+                          ),
+                        ],
                       );
                     },
                   );

@@ -5,6 +5,7 @@ import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/services/contact_services.dart';
 import 'package:smart_chat_app/utils/contact_utils.dart';
+import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 
 class NewChatScreen extends StatefulWidget {
   const NewChatScreen({super.key});
@@ -73,7 +74,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: Text(
           'Start New Chat',
@@ -130,11 +131,32 @@ class _NewChatScreenState extends State<NewChatScreen> {
                           )
                         : null,
                     filled: true,
-                    fillColor: colorScheme.surface.withAlpha(230),
+                    fillColor: colorScheme.surfaceBright.withAlpha((0.45 * 255).toInt()),
                     contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
+                      borderSide: BorderSide(
+                        color: isDark
+                            ? colorScheme.outline.withAlpha(120)
+                            : colorScheme.primary.withAlpha(120),
+                        width: 1.5,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: isDark
+                            ? colorScheme.outline.withAlpha(120)
+                            : colorScheme.primary.withAlpha(120),
+                        width: 1.5,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: colorScheme.primary,
+                        width: 2,
+                      ),
                     ),
                   ),
                 ),
@@ -147,10 +169,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : _filteredUsers.isEmpty
                       ? _buildEmptyState(colorScheme)
-                      : ListView.separated(
+                      : ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           itemCount: _filteredUsers.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final user = _filteredUsers[index];
                             return _buildContactTile(context, user, colorScheme, isDark);
@@ -206,12 +227,19 @@ class _NewChatScreenState extends State<NewChatScreen> {
     final initials = _getInitials(user);
 
     return Card(
-      elevation: 1,
-      margin: EdgeInsets.zero,
+      elevation: 3,
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: colorScheme.outline.withAlpha(isDark ? (0.18 * 255).toInt() : (0.10 * 255).toInt()),
+          width: 1,
+        ),
       ),
-      color: colorScheme.surface.withAlpha(isDark ? (0.55 * 255).toInt() : (0.85 * 255).toInt()),
+      color: isDark
+        ? colorScheme.surfaceContainerLow.withAlpha((0.9 * 255).toInt())
+        : colorScheme.surfaceContainerLow.withAlpha((0.95 * 255).toInt()),
+      shadowColor: colorScheme.primary.withAlpha((0.15 * 255).toInt()),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: CircleAvatar(

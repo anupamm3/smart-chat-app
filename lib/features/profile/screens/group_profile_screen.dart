@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/utils/snackbar_utils.dart';
+import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 
 class GroupProfileScreen extends StatefulWidget {
   final String groupId;
@@ -288,7 +289,7 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (_isLoadingGroup) {
-      return Scaffold(
+      return GradientScaffold(
         appBar: AppBar(
           title: Text(
             'Group Profile',
@@ -299,7 +300,7 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
       );
     }
 
-    return Scaffold(
+    return GradientScaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -315,208 +316,187 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
           ),
         ),
       ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark
-                ? [
-                    colorScheme.surfaceContainerHighest,
-                    colorScheme.surface,
-                    colorScheme.primaryContainer,
-                  ]
-                : [
-                    colorScheme.primaryContainer,
-                    colorScheme.surface,
-                    colorScheme.surfaceContainerHighest,
-                  ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Group Image
-                  GestureDetector(
-                    onTap: _showGroupImageDialog,
-                    child: Hero(
-                      tag: 'group_image_${widget.groupId}',
-                      child: _buildGroupAvatar(radius: 75),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Group Image
+                GestureDetector(
+                  onTap: _showGroupImageDialog,
+                  child: Hero(
+                    tag: 'group_image_${widget.groupId}',
+                    child: _buildGroupAvatar(radius: 75),
+                  ),
+                ),
+                const SizedBox(height: 24),
+        
+                // Group Name Section
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.groups,
+                      color: colorScheme.primary,
+                      size: 32,
                     ),
-                  ),
-                  const SizedBox(height: 24),
-          
-                  // Group Name Section
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.groups,
-                        color: colorScheme.primary,
-                        size: 32,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Group Name",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _groupName,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: colorScheme.onSurface.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Group Name",
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
-                                color: colorScheme.onSurface,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 28),
+        
+                // Group Info Section
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: colorScheme.primary,
+                      size: 32,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Group Info",
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${_members.length} members',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: colorScheme.onSurface.withValues(alpha: 0.8),
+                            ),
+                          ),
+                          if (_createdAt != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                _formatDate(_createdAt!),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  color: colorScheme.onSurface.withValues(alpha: 0.8),
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _groupName,
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: colorScheme.onSurface.withValues(alpha: 0.8),
-                              ),
-                            ),
-                          ],
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-          
-                  // Group Info Section
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: colorScheme.primary,
-                        size: 32,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Group Info",
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
-                                color: colorScheme.onSurface,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 28),
+        
+                // Members Section
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.people,
+                      color: colorScheme.primary,
+                      size: 32,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                "Members",
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  color: colorScheme.onSurface,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '${_members.length} members',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: colorScheme.onSurface.withValues(alpha: 0.8),
-                              ),
-                            ),
-                            if (_createdAt != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primaryContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                                 child: Text(
-                                  _formatDate(_createdAt!),
+                                  '${_members.length}',
                                   style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color: colorScheme.onSurface.withValues(alpha: 0.8),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-          
-                  // Members Section
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.people,
-                        color: colorScheme.primary,
-                        size: 32,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  "Members",
-                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 20,
-                                    color: colorScheme.onSurface,
+                                    color: colorScheme.primary,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.primaryContainer,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '${_members.length}',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: colorScheme.primary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-          
-                            // Members List
-                            if (_isLoadingMembers)
-                              const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(16),
-                                  child: CircularProgressIndicator(),
-                                ),
-                              )
-                            else if (_members.isEmpty)
-                              Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Text(
-                                    'No members found',
-                                    style: GoogleFonts.poppins(
-                                      color: colorScheme.onSurface
-                                          .withValues(alpha: 0.6),
-                                    ),
-                                  ),
-                                ),
-                              )
-                            else
-                              Column(
-                                children: _members
-                                    .map((member) => _buildMemberTile(member))
-                                    .toList(),
                               ),
-                          ],
-                        ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+        
+                          // Members List
+                          if (_isLoadingMembers)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(16),
+                                child: CircularProgressIndicator(),
+                              ),
+                            )
+                          else if (_members.isEmpty)
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Text(
+                                  'No members found',
+                                  style: GoogleFonts.poppins(
+                                    color: colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ),
+                            )
+                          else
+                            Column(
+                              children: _members
+                                  .map((member) => _buildMemberTile(member))
+                                  .toList(),
+                            ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),

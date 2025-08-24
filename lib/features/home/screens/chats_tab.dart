@@ -202,11 +202,32 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin {
                         )
                       : null,
                   filled: true,
-                  fillColor: colorScheme.surface.withAlpha(isDark ? (0.45 * 255).toInt() : (0.65 * 255).toInt()),
+                  fillColor: colorScheme.surfaceBright.withAlpha((0.45 * 255).toInt()),
                   contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
+                    borderSide: BorderSide(
+                      color: isDark
+                          ? colorScheme.outline.withAlpha(120)
+                          : colorScheme.primary.withAlpha(120),
+                      width: 1.5,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: isDark
+                          ? colorScheme.outline.withAlpha(120)
+                          : colorScheme.primary.withAlpha(120),
+                      width: 1.5,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: colorScheme.primary,
+                      width: 2,
+                    ),
                   ),
                 ),
                 style: GoogleFonts.poppins(),
@@ -356,14 +377,10 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin {
                             );
                           }
                           
-                          return ListView.separated(
+                          return ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
                             cacheExtent: 200,
                             itemCount: filteredChats.length,
-                            separatorBuilder: (_, __) => Divider(
-                              color: colorScheme.outline.withAlpha((0.08 * 255).toInt()),
-                              height: 0,
-                            ),
                             itemBuilder: (context, index) {
                               final chatData = filteredChats[index];
                               return _buildChatListTile(context, chatData, colorScheme, isDark);
@@ -617,10 +634,19 @@ class _ChatsTabState extends State<ChatsTab> with TickerProviderStateMixin {
     final unreadCount = data['unreadCounts']?[widget.user.uid]?.toString() ?? '';
 
     return Card(
-      elevation: 1,
+      elevation: 3,
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: colorScheme.surface.withAlpha(isDark ? (0.55 * 255).toInt() : (0.85 * 255).toInt()),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: colorScheme.outline.withAlpha(isDark ? (0.18 * 255).toInt() : (0.10 * 255).toInt()),
+          width: 1,
+        ),
+      ),
+      color: isDark
+        ? colorScheme.surfaceContainerLow.withAlpha((0.9 * 255).toInt())
+        : colorScheme.surfaceContainerLow.withAlpha((0.95 * 255).toInt()),
+      shadowColor: colorScheme.primary.withAlpha((0.15 * 255).toInt()),
       child: ListTile(
         leading: isChatbot 
             ? _buildChatbotAvatar(colorScheme)

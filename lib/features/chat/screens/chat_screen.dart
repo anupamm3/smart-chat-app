@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -50,6 +51,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
   late Animation<double> _typingAnimation;
   Timer? _typingTimer;
 
+  bool _isReceiverOnline = false;
+  DateTime? _receiverLastSeen;
+  StreamSubscription<DocumentSnapshot>? _onlineStatusSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -72,13 +77,51 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
         _startTypingListener();
       }
     });
+    _listenToOnlineStatus();
   }
 
   @override
   void dispose() {
     _typingAnimationController.dispose();
     _typingTimer?.cancel();
+    _onlineStatusSubscription?.cancel();
     super.dispose();
+  }
+
+  void _listenToOnlineStatus() {
+    _onlineStatusSubscription = FirebaseFirestore.instance
+      .collection('users')
+      .doc(widget.receiver.uid)
+      .snapshots()
+      .listen((doc) {
+        if (doc.exists && doc.data() != null) {
+          setState(() {
+            _isReceiverOnline = doc['isOnline'] ?? false;
+            final lastSeenTimestamp = doc['lastSeen'];
+            if (lastSeenTimestamp != null) {
+              _receiverLastSeen = (lastSeenTimestamp is Timestamp)
+                  ? lastSeenTimestamp.toDate()
+                  : null;
+            }
+          });
+        }
+      });
+  }
+
+  String _getLastSeenText() {
+    if (_receiverLastSeen == null) return '';
+    final now = DateTime.now();
+    final difference = now.difference(_receiverLastSeen!);
+
+    if (difference.inMinutes < 1) {
+      return 'just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} minutes ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hours ago';
+    } else {
+      return '${_receiverLastSeen!.day}/${_receiverLastSeen!.month}/${_receiverLastSeen!.year} at ${_receiverLastSeen!.hour.toString().padLeft(2, '0')}:${_receiverLastSeen!.minute.toString().padLeft(2, '0')}';
+    }
   }
 
   void _startTypingListener() {
@@ -644,6 +687,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
     );
   }
 
+  String formatChatDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final messageDay = DateTime(date.year, date.month, date.day);
+
+    if (messageDay == today) {
+      return "Today";
+    } else if (messageDay == yesterday) {
+      return "Yesterday";
+    } else {
+      return "${date.day}/${date.month}/${date.year}";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -706,6 +764,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (!_isChatbotChat)
+                    Row(
+                      children: [
+                        if (_isReceiverOnline)
+                          Icon(
+                            Icons.circle,
+                            color: Colors.green,
+                            size: 10,
+                          ),
+                        if (_isReceiverOnline)
+                          const SizedBox(width: 4),
+                        Text(
+                          _isReceiverOnline
+                              ? 'Online'
+                              : (_receiverLastSeen != null
+                                  ? 'Last seen ${_getLastSeenText()}'
+                                  : 'Offline'),
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: _isReceiverOnline ? Colors.green : null,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
                   if (_isChatbotChat)
                     Text(
                       'Powered by Gemini AI',
@@ -849,16 +932,74 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
                             final msg = messages[index];
                             final isMe = msg.senderId == chatController.currentUser.uid;
                             final time = msg.timestamp;
-                            return MessageBubble(
-                              text: msg.text,
-                              isMe: isMe,
-                              timestamp: time,
-                              status: isMe ? msg.status : null,
-                              mediaUrl: msg.mediaUrl,
-                              mediaType: msg.mediaType,
-                              fileName: msg.fileName,
-                              fileSize: msg.fileSize,
-                              mediaThumbnail: msg.mediaThumbnail,
+
+                            Widget? dateSeparator;
+                            if (index == 0 ||
+                                (messages[index - 1].timestamp != null &&
+                                time != null &&
+                                (messages[index - 1].timestamp!.day != time.day ||
+                                  messages[index - 1].timestamp!.month != time.month ||
+                                  messages[index - 1].timestamp!.year != time.year))) {
+                              final formattedDate = time != null ? formatChatDate(time) : '';
+                              dateSeparator = Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: MediaQuery.of(context).size.width * 0.10,
+                                    ),
+                                    Expanded(
+                                      child: Container(
+                                        margin: const EdgeInsets.only(right: 8),
+                                        height: 1,
+                                        color: Theme.of(context).colorScheme.outline.withAlpha(80),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Text(
+                                        formattedDate,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          color: Theme.of(context).colorScheme.onSurface.withAlpha(180),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Container(
+                                        margin: const EdgeInsets.only(left: 8),
+                                        height: 1,
+                                        color: Theme.of(context).colorScheme.outline.withAlpha(80),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: MediaQuery.of(context).size.width * 0.10,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (dateSeparator != null) dateSeparator,
+                                MessageBubble(
+                                  text: msg.text,
+                                  isMe: isMe,
+                                  timestamp: time,
+                                  status: isMe ? msg.status : null,
+                                  mediaUrl: msg.mediaUrl,
+                                  mediaType: msg.mediaType,
+                                  fileName: msg.fileName,
+                                  fileSize: msg.fileSize,
+                                  mediaThumbnail: msg.mediaThumbnail,
+                                ),
+                              ],
                             );
                           },
                         ),

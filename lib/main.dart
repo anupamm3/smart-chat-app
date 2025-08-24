@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -18,6 +19,7 @@ import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/providers/theme_provider.dart';
 import 'package:smart_chat_app/features/settings/settings_screen.dart';
 import 'package:smart_chat_app/services/media_cache_service.dart';
+import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 import 'features/auth/screens/phone_onboarding_screen.dart';
 import 'features/auth/screens/otp_verification_screen.dart';
 import 'features/home/screens/home_screen.dart';
@@ -150,16 +152,18 @@ class SmartChatApp extends ConsumerWidget {
           ),
         ),
       ),
-      home: authAsync.when(
-        data: (user) {
-          if (user != null) {
-            return const HomeScreen();
-          }
-          return const PhoneOnboardingScreen();
-        },
-        loading: () => const BrandedSplashScreen(),
-        error: (err, stack) => Scaffold(
-          body: Center(child: Text('Auth error: $err')),
+      home: GradientScaffold(
+        body: authAsync.when(
+          data: (user) {
+            if (user != null) {
+              return const HomeScreen();
+            }
+            return const PhoneOnboardingScreen();
+          },
+          loading: () => const BrandedSplashScreen(),
+          error: (err, stack) => Scaffold(
+            body: Center(child: Text('Auth error: $err')),
+          ),
         ),
       ),
       routes: {
@@ -301,5 +305,39 @@ class BrandedSplashScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class OnlineStatusManager with WidgetsBindingObserver {
+  final String uid;
+
+  OnlineStatusManager(this.uid);
+
+  void start() {
+    WidgetsBinding.instance.addObserver(this);
+    _setOnline(true);
+  }
+
+  void stop() {
+    WidgetsBinding.instance.removeObserver(this);
+    _setOnline(false);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _setOnline(true);
+    } else if (state == AppLifecycleState.paused ||
+               state == AppLifecycleState.inactive ||
+               state == AppLifecycleState.detached) {
+      _setOnline(false);
+    }
+  }
+
+  Future<void> _setOnline(bool online) async {
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'isOnline': online,
+      'lastSeen': FieldValue.serverTimestamp(),
+    });
   }
 }

@@ -11,7 +11,7 @@ class MessageBubble extends StatelessWidget {
   final bool isMe;
   final DateTime? timestamp;
   final MessageStatus? status;
-  // New media parameters
+  final String? senderName;
   final String? mediaUrl;
   final String? mediaType;
   final String? fileName;
@@ -24,6 +24,7 @@ class MessageBubble extends StatelessWidget {
     required this.isMe,
     this.timestamp,
     this.status,
+    this.senderName,
     this.mediaUrl,
     this.mediaType,
     this.fileName,
@@ -104,6 +105,19 @@ class MessageBubble extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Show sender name inside bubble for group messages (except own)
+              if (!isMe && senderName != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(
+                    senderName!,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                ),
               // Media content
               if (mediaUrl != null) ...[
                 _buildMediaWidget(context, colorScheme),
