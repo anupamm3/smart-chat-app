@@ -5,6 +5,7 @@ import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/models/user_model.dart';
 import 'package:smart_chat_app/services/contact_services.dart';
 import 'package:smart_chat_app/utils/contact_utils.dart';
+import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 
 class NewChatScreen extends StatefulWidget {
   const NewChatScreen({super.key});
@@ -73,7 +74,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: Text(
           'Start New Chat',

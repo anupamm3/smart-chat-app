@@ -44,17 +44,18 @@ class GradientScaffold extends StatelessWidget {
           gradient: LinearGradient(
             colors: isDark
                 ? [
-                    colorScheme.surfaceContainerHighest,
+                    colorScheme.surfaceContainerLow,
                     colorScheme.surface,
-                    colorScheme.primaryContainer
                   ]
                 : [
-                    colorScheme.primaryContainer,
-                    colorScheme.surface,
-                    colorScheme.surfaceContainerHighest
+                    colorScheme.surfaceContainerHighest,
+                    colorScheme.surface
                   ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            stops: isDark
+                ? [0.0, 0.16] // 16% height is surfaceContainerLow, rest is surface
+                : [0.0, 0.18],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
         child: body,

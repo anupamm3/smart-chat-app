@@ -172,7 +172,7 @@ class _GroupCreateScreenState extends State<GroupCreateScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: Text('Create Group', style: GoogleFonts.poppins()),
         backgroundColor: colorScheme.surface,

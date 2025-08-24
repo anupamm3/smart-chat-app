@@ -13,6 +13,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_chat_app/services/contact_services.dart';
 import 'package:smart_chat_app/utils/contact_utils.dart';
 import 'package:smart_chat_app/utils/snackbar_utils.dart';
+import 'package:smart_chat_app/widgets/gradient_scaffold.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -936,7 +937,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return GradientScaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -992,40 +993,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 ),
               ],
       ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: Theme.of(context).brightness == Brightness.dark
-                ? [
-                    _isChatbotProfile ? colorScheme.secondaryContainer : colorScheme.surfaceContainerHighest,
-                    colorScheme.surface,
-                    _isChatbotProfile ? colorScheme.secondaryContainer : colorScheme.primaryContainer
-                  ]
-                : [
-                    _isChatbotProfile ? colorScheme.secondaryContainer : colorScheme.primaryContainer,
-                    colorScheme.surface,
-                    _isChatbotProfile ? colorScheme.secondaryContainer : colorScheme.surfaceContainerHighest
-                  ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: isSelf
-              ? RefreshIndicator(
-                  onRefresh: _refreshProfile,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: _buildProfileContent(),
-                  ),
-                )
-              : SingleChildScrollView(
+      body: SafeArea(
+        child: isSelf
+            ? RefreshIndicator(
+                onRefresh: _refreshProfile,
+                child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: _buildProfileContent(),
                 ),
-        ),
+              )
+            : SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: _buildProfileContent(),
+              ),
       ),
     );
   }
