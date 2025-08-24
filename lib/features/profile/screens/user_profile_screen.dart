@@ -405,76 +405,536 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  void showProfileImageDialog() {
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    // NEW: Use different about text for chatbot
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(16),
+          child: _isChatbotProfile
+              ? Container(
+                  width: 300,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    color: colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(150),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/images/virtualAssistant.png',
+                        width: 200,
+                        height: 200,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.smart_toy_rounded,
+                            size: 150,
+                            color: colorScheme.secondary,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                )
+              : _localImage != null
+                  ? ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.file(_localImage!, fit: BoxFit.contain),
+                    )
+                  : widget.user.photoUrl.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.network(widget.user.photoUrl, fit: BoxFit.contain),
+                        )
+                      : Container(
+                          width: 180,
+                          height: 180,
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(90),
+                          ),
+                          child: Icon(Icons.person, size: 120, color: colorScheme.primary),
+                        ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileContent() {
+    final colorScheme = Theme.of(context).colorScheme;
     final String aboutText = _isChatbotProfile 
         ? "🤖 I'm your AI assistant powered by Gemini! I can help you with questions, creative tasks, problem-solving, and friendly conversation. Ask me anything!"
         : (_currentAbout.isNotEmpty ? _currentAbout : "Hey there! I am using Smart Chat.");
 
-    // Get display name using ContactService for non-self profiles
     String displayName = _currentName;
 
-    void showProfileImageDialog() {
-      showDialog(
-        context: context,
-        builder: (context) {
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.all(16),
-            child: _isChatbotProfile
-                ? Container(
-                    width: 300,
-                    height: 300,
-                    decoration: BoxDecoration(
-                      color: colorScheme.secondaryContainer,
-                      borderRadius: BorderRadius.circular(150),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Profile Image with tap - UPDATED
+          Stack(
+            alignment: Alignment.topRight,
+            children: [
+              GestureDetector(
+                onTap: showProfileImageDialog,
+                child: Hero(
+                  tag: 'profile_image_${widget.user.uid}',
+                  child: _isChatbotProfile
+                      ? _buildChatbotAvatar(radius: 75)
+                      : _buildUserAvatar(radius: 75),
+                ),
+              ),
+              // NEW: Hide edit/remove buttons for chatbot
+              if (isSelf && !_isChatbotProfile && (widget.user.photoUrl.isNotEmpty || _localImage != null))
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                      shape: const CircleBorder(),
+                      padding: const EdgeInsets.all(4),
+                      minimumSize: const Size(32, 32),
+                      elevation: 1,
                     ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Image.asset(
-                          'assets/images/virtualAssistant.png',
-                          width: 200,
-                          height: 200,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.smart_toy_rounded,
-                              size: 150,
-                              color: colorScheme.secondary,
-                            );
-                          },
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Remove Profile Photo'),
+                          content: const Text('Are you sure you want to remove your profile photo?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(false),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: colorScheme.error,
+                                foregroundColor: colorScheme.onError,
+                              ),
+                              onPressed: () => Navigator.of(context).pop(true),
+                              child: const Text('Remove'),
+                            ),
+                          ],
                         ),
+                      );
+                      if (confirm == true) {
+                        await _removeProfilePhoto();
+                      }
+                    },
+                    child: Icon(
+                      Icons.close,
+                      size: 20,
+                      color: colorScheme.onPrimary,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          // Edit button (only for self and not chatbot) - UPDATED
+          if (isSelf && !_isChatbotProfile)
+            Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 24),
+              child: Center(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    elevation: 1,
+                  ),
+                  label: Text(
+                    "Edit Photo",
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  ),
+                  onPressed: _pickImage,
+                ),
+              ),
+            )
+          else
+            const SizedBox(height: 36),
+  
+          // Name Section with inline editing - UPDATED
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                _isChatbotProfile ? Icons.smart_toy_rounded : Icons.person, 
+                color: _isChatbotProfile ? colorScheme.secondary : colorScheme.primary, 
+                size: 32
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          "Name",
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                            color: _isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface,
+                          ),
+                        ),
+                        // NEW: Hide edit for chatbot
+                        if (isSelf && !_isChatbotProfile && !_isEditingName && !_isUpdatingName) ...[
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isEditingName = true;
+                                _nameController.text = _currentName;
+                              });
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted) {
+                                  FocusScope.of(context).requestFocus(FocusNode());
+                                }
+                              });
+                            },
+                            child: Icon(
+                              Icons.edit,
+                              size: 18,
+                              color: colorScheme.primary.withAlpha((0.7 * 255).toInt()),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
-                  )
-                : _localImage != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.file(_localImage!, fit: BoxFit.contain),
-                      )
-                    : widget.user.photoUrl.isNotEmpty
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.network(widget.user.photoUrl, fit: BoxFit.contain),
-                          )
-                        : Container(
-                            width: 180,
-                            height: 180,
-                            decoration: BoxDecoration(
-                              color: colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(90),
+                    const SizedBox(height: 8),
+                    
+                    // Content area - UPDATED
+                    if (_isEditingName && !_isChatbotProfile) ...[
+                      // Edit mode (hidden for chatbot)
+                      Column(
+                        children: [
+                          TextField(
+                            controller: _nameController,
+                            autofocus: true,
+                            enabled: !_isUpdatingName,
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: colorScheme.onSurface,
                             ),
-                            child: Icon(Icons.person, size: 120, color: colorScheme.primary),
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: colorScheme.outline),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: colorScheme.primary, width: 2),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              hintText: 'Enter your name',
+                              hintStyle: GoogleFonts.poppins(
+                                color: colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
+                              ),
+                              counterText: '${_nameController.text.length}/50',
+                              counterStyle: GoogleFonts.poppins(fontSize: 12),
+                            ),
+                            maxLength: 50,
+                            onSubmitted: (_) => _updateName(),
+                            onChanged: (value) {
+                              setState(() {});
+                            },
                           ),
-          );
-        },
-      );
-    }
+                          const SizedBox(height: 8),
+                          
+                          // Action buttons
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (_isUpdatingName)
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: colorScheme.primary,
+                                    ),
+                                  ),
+                                )
+                              else ...[
+                                GestureDetector(
+                                  onTap: _cancelNameEdit,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.outline.withAlpha((0.2 * 255).toInt()),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Cancel',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: _updateName,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primary,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Save',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: colorScheme.onPrimary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      // Display mode
+                      Text(
+                        displayName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: (_isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface).withAlpha((0.8 * 255).toInt()),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 28),
+  
+          // About Section with inline editing - UPDATED
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.info_outline, 
+                color: _isChatbotProfile ? colorScheme.secondary : colorScheme.primary, 
+                size: 32
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          "About",
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 20,
+                            color: _isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface,
+                          ),
+                        ),
+                        // NEW: Hide edit for chatbot
+                        if (isSelf && !_isChatbotProfile && !_isEditingAbout && !_isUpdatingAbout) ...[
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isEditingAbout = true;
+                                _aboutController.text = _currentAbout;
+                              });
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted) {
+                                  FocusScope.of(context).requestFocus(FocusNode());
+                                }
+                              });
+                            },
+                            child: Icon(
+                              Icons.edit,
+                              size: 18,
+                              color: colorScheme.primary.withAlpha((0.7 * 255).toInt()),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    
+                    // Content area - UPDATED
+                    if (_isEditingAbout && !_isChatbotProfile) ...[
+                      // Edit mode (hidden for chatbot)
+                      Column(
+                        children: [
+                          TextField(
+                            controller: _aboutController,
+                            autofocus: true,
+                            enabled: !_isUpdatingAbout,
+                            maxLines: 3,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: colorScheme.onSurface,
+                            ),
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: colorScheme.outline),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: colorScheme.primary, width: 2),
+                              ),
+                              contentPadding: const EdgeInsets.all(12),
+                              hintText: 'Hey there! I am using Smart Chat.',
+                              hintStyle: GoogleFonts.poppins(
+                                color: colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
+                              ),
+                              counterText: '${_aboutController.text.length}/200',
+                              counterStyle: GoogleFonts.poppins(fontSize: 12),
+                            ),
+                            maxLength: 200,
+                            onChanged: (value) {
+                              setState(() {});
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          // Action buttons
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (_isUpdatingAbout)
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: colorScheme.primary,
+                                    ),
+                                  ),
+                                )
+                              else ...[
+                                GestureDetector(
+                                  onTap: _cancelAboutEdit,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.outline.withAlpha((0.2 * 255).toInt()),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Cancel',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                GestureDetector(
+                                  onTap: _updateAbout,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primary,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Save',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        color: colorScheme.onPrimary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      // Display mode
+                      Text(
+                        aboutText,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: (_isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface).withAlpha((0.8 * 255).toInt()),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 28),
+  
+          // Phone Section (read-only) - UPDATED
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                _isChatbotProfile ? Icons.computer : Icons.call, 
+                color: _isChatbotProfile ? colorScheme.secondary : colorScheme.primary, 
+                size: 32
+              ),
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _isChatbotProfile ? "Type" : "Phone",
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      color: _isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _isChatbotProfile 
+                        ? "AI Assistant • Powered by Gemini" 
+                        : PhoneUtils.formatForDisplay(widget.user.phoneNumber),
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      color: (_isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface).withAlpha((0.8 * 255).toInt()),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -553,469 +1013,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           ),
         ),
         child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: _refreshProfile,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Profile Image with tap - UPDATED
-                    Stack(
-                      alignment: Alignment.topRight,
-                      children: [
-                        GestureDetector(
-                          onTap: showProfileImageDialog,
-                          child: Hero(
-                            tag: 'profile_image_${widget.user.uid}',
-                            child: _isChatbotProfile
-                                ? _buildChatbotAvatar(radius: 75)
-                                : _buildUserAvatar(radius: 75),
-                          ),
-                        ),
-                        // NEW: Hide edit/remove buttons for chatbot
-                        if (isSelf && !_isChatbotProfile && (widget.user.photoUrl.isNotEmpty || _localImage != null))
-                          Positioned(
-                            top: -2,
-                            right: -2,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: colorScheme.primary,
-                                foregroundColor: colorScheme.onPrimary,
-                                shape: const CircleBorder(),
-                                padding: const EdgeInsets.all(4),
-                                minimumSize: const Size(32, 32),
-                                elevation: 1,
-                              ),
-                              onPressed: () async {
-                                final confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Remove Profile Photo'),
-                                    content: const Text('Are you sure you want to remove your profile photo?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(context).pop(false),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: colorScheme.error,
-                                          foregroundColor: colorScheme.onError,
-                                        ),
-                                        onPressed: () => Navigator.of(context).pop(true),
-                                        child: const Text('Remove'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                                if (confirm == true) {
-                                  await _removeProfilePhoto();
-                                }
-                              },
-                              child: Icon(
-                                Icons.close,
-                                size: 20,
-                                color: colorScheme.onPrimary,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    // Edit button (only for self and not chatbot) - UPDATED
-                    if (isSelf && !_isChatbotProfile)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12, bottom: 24),
-                        child: Center(
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: colorScheme.primary,
-                              foregroundColor: colorScheme.onPrimary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              elevation: 1,
-                            ),
-                            label: Text(
-                              "Edit Photo",
-                              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                            ),
-                            onPressed: _pickImage,
-                          ),
-                        ),
-                      )
-                    else
-                      const SizedBox(height: 36),
-            
-                    // Name Section with inline editing - UPDATED
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          _isChatbotProfile ? Icons.smart_toy_rounded : Icons.person, 
-                          color: _isChatbotProfile ? colorScheme.secondary : colorScheme.primary, 
-                          size: 32
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    "Name",
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20,
-                                      color: _isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface,
-                                    ),
-                                  ),
-                                  // NEW: Hide edit for chatbot
-                                  if (isSelf && !_isChatbotProfile && !_isEditingName && !_isUpdatingName) ...[
-                                    const SizedBox(width: 8),
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _isEditingName = true;
-                                          _nameController.text = _currentName;
-                                        });
-                                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                                          if (mounted) {
-                                            FocusScope.of(context).requestFocus(FocusNode());
-                                          }
-                                        });
-                                      },
-                                      child: Icon(
-                                        Icons.edit,
-                                        size: 18,
-                                        color: colorScheme.primary.withAlpha((0.7 * 255).toInt()),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              
-                              // Content area - UPDATED
-                              if (_isEditingName && !_isChatbotProfile) ...[
-                                // Edit mode (hidden for chatbot)
-                                Column(
-                                  children: [
-                                    TextField(
-                                      controller: _nameController,
-                                      autofocus: true,
-                                      enabled: !_isUpdatingName,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                        color: colorScheme.onSurface,
-                                      ),
-                                      decoration: InputDecoration(
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: colorScheme.outline),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: colorScheme.primary, width: 2),
-                                        ),
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                        hintText: 'Enter your name',
-                                        hintStyle: GoogleFonts.poppins(
-                                          color: colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
-                                        ),
-                                        counterText: '${_nameController.text.length}/50',
-                                        counterStyle: GoogleFonts.poppins(fontSize: 12),
-                                      ),
-                                      maxLength: 50,
-                                      onSubmitted: (_) => _updateName(),
-                                      onChanged: (value) {
-                                        setState(() {});
-                                      },
-                                    ),
-                                    const SizedBox(height: 8),
-                                    
-                                    // Action buttons
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        if (_isUpdatingName)
-                                          Container(
-                                            padding: const EdgeInsets.all(8),
-                                            child: SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: colorScheme.primary,
-                                              ),
-                                            ),
-                                          )
-                                        else ...[
-                                          GestureDetector(
-                                            onTap: _cancelNameEdit,
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                              decoration: BoxDecoration(
-                                                color: colorScheme.outline.withAlpha((0.2 * 255).toInt()),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Text(
-                                                'Cancel',
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 14,
-                                                  color: colorScheme.onSurface,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          GestureDetector(
-                                            onTap: _updateName,
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                              decoration: BoxDecoration(
-                                                color: colorScheme.primary,
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Text(
-                                                'Save',
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 14,
-                                                  color: colorScheme.onPrimary,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ] else ...[
-                                // Display mode
-                                Text(
-                                  displayName,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: (_isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface).withAlpha((0.8 * 255).toInt()),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 28),
-            
-                    // About Section with inline editing - UPDATED
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.info_outline, 
-                          color: _isChatbotProfile ? colorScheme.secondary : colorScheme.primary, 
-                          size: 32
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text(
-                                    "About",
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20,
-                                      color: _isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface,
-                                    ),
-                                  ),
-                                  // NEW: Hide edit for chatbot
-                                  if (isSelf && !_isChatbotProfile && !_isEditingAbout && !_isUpdatingAbout) ...[
-                                    const SizedBox(width: 8),
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() {
-                                          _isEditingAbout = true;
-                                          _aboutController.text = _currentAbout;
-                                        });
-                                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                                          if (mounted) {
-                                            FocusScope.of(context).requestFocus(FocusNode());
-                                          }
-                                        });
-                                      },
-                                      child: Icon(
-                                        Icons.edit,
-                                        size: 18,
-                                        color: colorScheme.primary.withAlpha((0.7 * 255).toInt()),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              
-                              // Content area - UPDATED
-                              if (_isEditingAbout && !_isChatbotProfile) ...[
-                                // Edit mode (hidden for chatbot)
-                                Column(
-                                  children: [
-                                    TextField(
-                                      controller: _aboutController,
-                                      autofocus: true,
-                                      enabled: !_isUpdatingAbout,
-                                      maxLines: 3,
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        color: colorScheme.onSurface,
-                                      ),
-                                      decoration: InputDecoration(
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: colorScheme.outline),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: colorScheme.primary, width: 2),
-                                        ),
-                                        contentPadding: const EdgeInsets.all(12),
-                                        hintText: 'Hey there! I am using Smart Chat.',
-                                        hintStyle: GoogleFonts.poppins(
-                                          color: colorScheme.onSurface.withAlpha((0.6 * 255).toInt()),
-                                        ),
-                                        counterText: '${_aboutController.text.length}/200',
-                                        counterStyle: GoogleFonts.poppins(fontSize: 12),
-                                      ),
-                                      maxLength: 200,
-                                      onChanged: (value) {
-                                        setState(() {});
-                                      },
-                                    ),
-                                    const SizedBox(height: 8),
-                                    // Action buttons
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        if (_isUpdatingAbout)
-                                          Container(
-                                            padding: const EdgeInsets.all(8),
-                                            child: SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: colorScheme.primary,
-                                              ),
-                                            ),
-                                          )
-                                        else ...[
-                                          GestureDetector(
-                                            onTap: _cancelAboutEdit,
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                              decoration: BoxDecoration(
-                                                color: colorScheme.outline.withAlpha((0.2 * 255).toInt()),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Text(
-                                                'Cancel',
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 14,
-                                                  color: colorScheme.onSurface,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          GestureDetector(
-                                            onTap: _updateAbout,
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                              decoration: BoxDecoration(
-                                                color: colorScheme.primary,
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Text(
-                                                'Save',
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 14,
-                                                  color: colorScheme.onPrimary,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ] else ...[
-                                // Display mode
-                                Text(
-                                  aboutText,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color: (_isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface).withAlpha((0.8 * 255).toInt()),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 28),
-            
-                    // Phone Section (read-only) - UPDATED
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          _isChatbotProfile ? Icons.computer : Icons.call, 
-                          color: _isChatbotProfile ? colorScheme.secondary : colorScheme.primary, 
-                          size: 32
-                        ),
-                        const SizedBox(width: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _isChatbotProfile ? "Type" : "Phone",
-                              style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
-                                color: _isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _isChatbotProfile 
-                                  ? "AI Assistant • Powered by Gemini" 
-                                  : PhoneUtils.formatForDisplay(widget.user.phoneNumber),
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                color: (_isChatbotProfile ? colorScheme.secondary : colorScheme.onSurface).withAlpha((0.8 * 255).toInt()),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
+          child: isSelf
+              ? RefreshIndicator(
+                  onRefresh: _refreshProfile,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: _buildProfileContent(),
+                  ),
+                )
+              : SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: _buildProfileContent(),
                 ),
-              ),
-            ),
-          ),
         ),
       ),
     );
