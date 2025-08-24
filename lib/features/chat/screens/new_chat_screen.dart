@@ -169,10 +169,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : _filteredUsers.isEmpty
                       ? _buildEmptyState(colorScheme)
-                      : ListView.separated(
+                      : ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           itemCount: _filteredUsers.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final user = _filteredUsers[index];
                             return _buildContactTile(context, user, colorScheme, isDark);
@@ -228,12 +227,19 @@ class _NewChatScreenState extends State<NewChatScreen> {
     final initials = _getInitials(user);
 
     return Card(
-      elevation: 1,
-      margin: EdgeInsets.zero,
+      elevation: 3,
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: colorScheme.outline.withAlpha(isDark ? (0.18 * 255).toInt() : (0.10 * 255).toInt()),
+          width: 1,
+        ),
       ),
-      color: colorScheme.surface.withAlpha(isDark ? (0.55 * 255).toInt() : (0.85 * 255).toInt()),
+      color: isDark
+        ? colorScheme.surfaceContainerLow.withAlpha((0.9 * 255).toInt())
+        : colorScheme.surfaceContainerLow.withAlpha((0.95 * 255).toInt()),
+      shadowColor: colorScheme.primary.withAlpha((0.15 * 255).toInt()),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: CircleAvatar(

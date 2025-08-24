@@ -177,12 +177,8 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
                   ),
                 );
               }
-              return ListView.separated(
+              return ListView.builder(
                 itemCount: filteredGroups.length,
-                separatorBuilder: (_, __) => Divider(
-                  color: colorScheme.outline.withAlpha((0.08 * 255).toInt()),
-                  height: 0,
-                ),
                 itemBuilder: (context, index) {
                   final group = filteredGroups[index];
                   return _buildGroupListTile(context, group, colorScheme, isDark);
@@ -197,10 +193,19 @@ class _GroupsTabState extends ConsumerState<GroupsTab> {
 
   Widget _buildGroupListTile(BuildContext context, dynamic group, ColorScheme colorScheme, bool isDark) {
     return Card(
-      elevation: 1,
+      elevation: 3,
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: colorScheme.surface.withAlpha(isDark ? (0.55 * 255).toInt() : (0.85 * 255).toInt()),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: colorScheme.outline.withAlpha(isDark ? (0.18 * 255).toInt() : (0.10 * 255).toInt()),
+          width: 1,
+        ),
+      ),
+      color: isDark
+        ? colorScheme.surfaceContainerLow.withAlpha((0.9 * 255).toInt())
+        : colorScheme.surfaceContainerLow.withAlpha((0.95 * 255).toInt()),
+      shadowColor: colorScheme.primary.withAlpha((0.15 * 255).toInt()),
       child: ListTile(
         leading: CircleAvatar(
           backgroundImage: group.photoUrl != null && group.photoUrl!.isNotEmpty
