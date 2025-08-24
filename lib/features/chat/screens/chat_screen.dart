@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -50,6 +51,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
   late Animation<double> _typingAnimation;
   Timer? _typingTimer;
 
+  bool _isReceiverOnline = false;
+  DateTime? _receiverLastSeen;
+  StreamSubscription<DocumentSnapshot>? _onlineStatusSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -72,13 +77,51 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
         _startTypingListener();
       }
     });
+    _listenToOnlineStatus();
   }
 
   @override
   void dispose() {
     _typingAnimationController.dispose();
     _typingTimer?.cancel();
+    _onlineStatusSubscription?.cancel();
     super.dispose();
+  }
+
+  void _listenToOnlineStatus() {
+    _onlineStatusSubscription = FirebaseFirestore.instance
+      .collection('users')
+      .doc(widget.receiver.uid)
+      .snapshots()
+      .listen((doc) {
+        if (doc.exists && doc.data() != null) {
+          setState(() {
+            _isReceiverOnline = doc['isOnline'] ?? false;
+            final lastSeenTimestamp = doc['lastSeen'];
+            if (lastSeenTimestamp != null) {
+              _receiverLastSeen = (lastSeenTimestamp is Timestamp)
+                  ? lastSeenTimestamp.toDate()
+                  : null;
+            }
+          });
+        }
+      });
+  }
+
+  String _getLastSeenText() {
+    if (_receiverLastSeen == null) return '';
+    final now = DateTime.now();
+    final difference = now.difference(_receiverLastSeen!);
+
+    if (difference.inMinutes < 1) {
+      return 'just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} minutes ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hours ago';
+    } else {
+      return '${_receiverLastSeen!.day}/${_receiverLastSeen!.month}/${_receiverLastSeen!.year} at ${_receiverLastSeen!.hour.toString().padLeft(2, '0')}:${_receiverLastSeen!.minute.toString().padLeft(2, '0')}';
+    }
   }
 
   void _startTypingListener() {
@@ -706,6 +749,31 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (!_isChatbotChat)
+                    Row(
+                      children: [
+                        if (_isReceiverOnline)
+                          Icon(
+                            Icons.circle,
+                            color: Colors.green,
+                            size: 10,
+                          ),
+                        if (_isReceiverOnline)
+                          const SizedBox(width: 4),
+                        Text(
+                          _isReceiverOnline
+                              ? 'Online'
+                              : (_receiverLastSeen != null
+                                  ? 'Last seen ${_getLastSeenText()}'
+                                  : 'Offline'),
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: _isReceiverOnline ? Colors.green : null,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ),
                   if (_isChatbotChat)
                     Text(
                       'Powered by Gemini AI',

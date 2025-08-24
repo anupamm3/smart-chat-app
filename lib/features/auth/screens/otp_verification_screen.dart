@@ -77,7 +77,7 @@ class _OTPVerificationScreenState extends ConsumerState<OTPVerificationScreen> {
             name: user.phoneNumber ?? '', // Default to phone, prompt for name later
             bio: '',
             photoUrl: '',
-            isOnline: true,
+            isOnline: false,
             lastSeen: DateTime.now(),
             groups: [],
             friends: [],

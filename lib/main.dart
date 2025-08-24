@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -301,5 +302,39 @@ class BrandedSplashScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class OnlineStatusManager with WidgetsBindingObserver {
+  final String uid;
+
+  OnlineStatusManager(this.uid);
+
+  void start() {
+    WidgetsBinding.instance.addObserver(this);
+    _setOnline(true);
+  }
+
+  void stop() {
+    WidgetsBinding.instance.removeObserver(this);
+    _setOnline(false);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _setOnline(true);
+    } else if (state == AppLifecycleState.paused ||
+               state == AppLifecycleState.inactive ||
+               state == AppLifecycleState.detached) {
+      _setOnline(false);
+    }
+  }
+
+  Future<void> _setOnline(bool online) async {
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'isOnline': online,
+      'lastSeen': FieldValue.serverTimestamp(),
+    });
   }
 }

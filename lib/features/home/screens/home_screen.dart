@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smart_chat_app/main.dart';
 import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/features/home/screens/chats_tab.dart';
 import 'package:smart_chat_app/features/home/screens/groups_tab.dart';
@@ -15,6 +16,23 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIdx = 0;
   int _previousIdx = 0;
+  OnlineStatusManager? _onlineStatusManager;
+
+  @override
+  void initState() {
+    super.initState();
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      _onlineStatusManager = OnlineStatusManager(currentUser.uid);
+      _onlineStatusManager!.start();
+    }
+  }
+
+  @override
+  void dispose() {
+    _onlineStatusManager?.stop();
+    super.dispose();
+  }
 
   // Create the tabs list
   List<Widget> _getTabs(User user) {
