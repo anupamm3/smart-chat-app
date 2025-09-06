@@ -9,6 +9,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:smart_chat_app/features/whiteboard/screens/whiteboard_screen.dart';
+import 'package:smart_chat_app/features/whiteboard/widgets/whiteboard_launcher.dart';
 import 'package:smart_chat_app/router.dart';
 import 'package:smart_chat_app/features/chat/controller/chat_controller.dart';
 import 'package:smart_chat_app/models/chatbot_model.dart';
@@ -165,6 +167,26 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
   bool _isPhoneLike(String s) {
     final cleaned = s.replaceAll(RegExp(r'[\s\-\(\)\+]'), '');
     return cleaned.isNotEmpty && RegExp(r'^\d+$').hasMatch(cleaned);
+  }
+
+  void _openWhiteboard() {
+    final chatController = ref.read(chatControllerProvider(widget.receiver));
+    final currentUser = FirebaseAuth.instance.currentUser;
+    
+    if (currentUser == null) return;
+    
+    // Navigate to whiteboard screen
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WhiteboardScreen(
+          chatId: chatController.chatId,
+          chatType: 'individual',
+          participants: [currentUser.uid, widget.receiver.uid],
+          title: _displayName,
+        ),
+      ),
+    );
   }
 
   void _sendMessage(ChatController chatController) async {
@@ -835,7 +857,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
                   ),
                 ),
               ]
-            : null,
+            : [
+                // whiteboard action button for non-chatbot chats
+                IconButton(
+                  icon: Icon(
+                    Icons.draw_outlined,
+                    color: colorScheme.primary,
+                  ),
+                  tooltip: 'Open Whiteboard',
+                  onPressed: _openWhiteboard,
+                ),
+              ],
       ),
       body: SafeArea(
         child: Column(
@@ -915,6 +947,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
                               style: GoogleFonts.poppins(
                                 color: colorScheme.onSurface.withAlpha((0.7 * 255).toInt()),
                               ),
+                            ),
+                            const SizedBox(height: 16),
+                            // Add whiteboard launcher for empty chat
+                            WhiteboardLauncher(
+                              chatId: chatController.chatId,
+                              chatType: 'individual',
+                              participants: [FirebaseAuth.instance.currentUser!.uid, widget.receiver.uid],
+                              chatTitle: _displayName,
+                              isCompact: true,
+                            ),
+                            const SizedBox(height: 16),
+                            // whiteboard launcher for empty chat
+                            WhiteboardLauncher(
+                              chatId: chatController.chatId,
+                              chatType: 'individual',
+                              participants: [FirebaseAuth.instance.currentUser!.uid, widget.receiver.uid],
+                              chatTitle: _displayName,
+                              isCompact: true,
                             ),
                           ],
                         ],
@@ -1058,7 +1108,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
                     ),
                   ),
                   const SizedBox(width: 8),
-                  if (!_isChatbotChat)
+                  if (!_isChatbotChat) ...[
+                    // Whiteboard button for individual chats
+                    Material(
+                      color: colorScheme.tertiary,
+                      shape: const CircleBorder(),
+                      elevation: 4,
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: _openWhiteboard,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Icon(
+                            Icons.draw_outlined,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Schedule message button
                     Material(
                       color: colorScheme.primary,
                       shape: const CircleBorder(),
@@ -1076,7 +1146,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with TickerProviderStat
                         ),
                       ),
                     ),
-                  if (!_isChatbotChat) const SizedBox(width: 8),
+                    const SizedBox(width: 8),
+                  ],
                   Material(
                     color: colorScheme.primary,
                     shape: const CircleBorder(),

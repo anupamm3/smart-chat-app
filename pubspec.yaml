@@ -72,6 +72,8 @@ dependencies:
   
   shared_preferences: ^2.5.3
   rename: ^3.1.0
+  flutter_colorpicker: ^1.1.0
+  share_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:
